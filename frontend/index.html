@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FXLab · USD/INR Analysis</title>
+  <meta name="description" content="FXLab - Currency Exchange Rate and Volatility Analysis Using R">
+  <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="backdrop-scene" aria-hidden="true"></div>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- ===================== TOP BAR ===================== -->
+  <header class="topbar">
+    <a class="brand" href="#/dashboard" aria-label="FXLab dashboard">
+      <svg class="icon brand-mark" aria-hidden="true"><use href="assets/icons.svg#i-chart-no-axes-column-increasing"/></svg>
+      <span class="brand-text">
+        <span class="brand-name">FX<span class="accent">Lab</span></span>
+        <span class="brand-sub">Currency Exchange &amp;<br>Volatility Analysis</span>
+      </span>
+    </a>
+    <div class="topbar-tools">
+      <div class="popover-wrap">
+        <button class="pill" type="button" id="pair-button" aria-expanded="false" aria-controls="pair-pop">
+          <svg class="flag" viewBox="0 0 30 20" aria-hidden="true">
+            <rect width="30" height="20" rx="2" fill="#fff"/><rect width="30" height="6.67" fill="#ff9933"/>
+            <rect y="13.33" width="30" height="6.67" fill="#138808"/><circle cx="15" cy="10" r="2.6" fill="none" stroke="#000080" stroke-width="0.8"/>
+          </svg>
+          <span>USD / INR</span>
+          <svg class="icon icon-sm" aria-hidden="true"><use href="assets/icons.svg#i-chevron-down"/></svg>
+        </button>
+        <div class="popover glass" id="pair-pop" hidden>
+          <p class="popover-title">Currency pair: USD / INR</p>
+          <p>FXLab analyses the U.S. dollar – Indian rupee rate (rupees per dollar). It is the only pair available.</p>
+          <p id="pair-data-note">Data: FRED series DEXINUS (stored locally, not a live feed).</p>
+          <a class="link" href="#/historical">Manage historical data →</a>
+        </div>
+      </div>
+      <div class="clock" aria-label="Current date and time">
+        <span id="clock-date">—</span>
+        <span id="clock-time">—</span>
+      </div>
+      <div class="popover-wrap">
+        <button class="avatar" type="button" id="status-button" aria-expanded="false" aria-controls="status-pop"
+                aria-label="R backend status: checking">
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-activity"/></svg>
+          <span class="status-dot" aria-hidden="true"></span>
+        </button>
+        <div class="popover glass popover-right" id="status-pop" hidden>
+          <p class="popover-title" id="status-title">Checking the R backend…</p>
+          <p id="status-detail">All statistics are computed by R through the Plumber API.</p>
+          <p class="popover-actions">
+            <button class="btn btn-small" type="button" id="status-retry">Check again</button>
+            <a class="link" href="/__docs__/" target="_blank" rel="noopener">API explorer</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===================== FLOATING NAVIGATION RAIL ===================== -->
+  <nav class="rail" id="app-nav" aria-label="Sections">
+    <a class="rail-btn" href="#/dashboard" data-view="dashboard">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-line"/></svg>
+      <span class="rail-label">Exchange Rate Dashboard</span>
+    </a>
+    <a class="rail-btn" href="#/descriptive" data-view="descriptive distributions">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-no-axes-column"/></svg>
+      <span class="rail-label">Distribution Analysis</span>
+    </a>
+    <a class="rail-btn" href="#/monte-carlo" data-view="monte-carlo">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-box"/></svg>
+      <span class="rail-label">Monte Carlo Simulation</span>
+    </a>
+    <a class="rail-btn" href="#/hypothesis" data-view="hypothesis">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-flask-conical"/></svg>
+      <span class="rail-label">Hypothesis Testing</span>
+    </a>
+    <a class="rail-btn" href="#/regression" data-view="regression">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-spline"/></svg>
+      <span class="rail-label">Correlation &amp; Regression</span>
+    </a>
+    <a class="rail-btn" href="#/historical" data-view="historical">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-database"/></svg>
+      <span class="rail-label">Historical Data</span>
+    </a>
+    <a class="rail-btn" href="#/about" data-view="about">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg>
+      <span class="rail-label">About Project</span>
+    </a>
+  </nav>
+
+
+  <main id="main" class="workspace" tabindex="-1">
+    <div class="banner banner-error" id="global-banner" role="alert" hidden></div>
+
+    <!-- ===================== DASHBOARD (reference composition) ===================== -->
+    <section class="view view-dashboard" id="view-dashboard" data-title="Dashboard" hidden>
+      <div class="hero">
+        <div class="hero-text">
+          <p class="eyebrow">Explore · Analyze · Simulate</p>
+          <h1 class="hero-title">Currency Exchange<br>&amp; <span class="accent">Volatility</span> Analysis</h1>
+          <p class="hero-sub">Analyze USD/INR exchange rates using probability and statistical techniques.</p>
+        </div>
+        <p class="tagline" aria-hidden="true"><span>Data</span><span>Driven</span><span>Insights</span><span>For a</span><span>Brighter</span><span>Tomorrow</span></p>
+      </div>
+
+      <!-- Simulation Parameters: part of this page only (inputs for POST /simulate). -->
+      <section class="sim-params glass" id="sim-params" aria-labelledby="params-title">
+        <div class="params-head">
+          <span class="params-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-settings"/></svg></span>
+          <h2 id="params-title">Simulation Parameters</h2>
+        </div>
+        <p class="params-sub">Set the parameters for exchange rate simulation.</p>
+        <form id="params-form" class="params-form" novalidate>
+          <div class="field">
+            <label for="sp-start_rate">Starting Exchange Rate (₹ per $)
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="USD/INR rate at day 0, in rupees per dollar. The default is the last observation in the dataset (not a live quote)."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <input id="sp-start_rate" name="start_rate" type="number" step="any" min="0.0001" max="1000000" required>
+          </div>
+          <div class="field">
+            <label for="sp-mu_daily_pct">Expected Daily Return (μ)
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="Drift of GBM in percent per trading day. The default is estimated from historical USD/INR log returns."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <div class="input-group">
+              <input id="sp-mu_daily_pct" name="mu_daily_pct" type="number" step="any" min="-5" max="5" required>
+              <span class="suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="sp-sigma_daily_pct">Volatility (σ) - Daily Std. Dev.
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="Standard deviation of daily log returns in percent per trading day (annualised volatility ≈ σ × √252)."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <div class="input-group">
+              <input id="sp-sigma_daily_pct" name="sigma_daily_pct" type="number" step="any" min="0" max="20" required>
+              <span class="suffix">%</span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="sp-period">Simulation Period
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="Length of each simulated path. One step is one trading day; weeks, months and years are converted to 5, 21 and 252 trading days."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <div class="split">
+              <input id="sp-period" name="period" type="number" step="1" min="1" max="1000" required>
+              <label class="sr-only" for="sp-period_unit">Period unit</label>
+              <select id="sp-period_unit" name="period_unit">
+                <option value="1">Days</option>
+                <option value="5">Weeks</option>
+                <option value="21">Months</option>
+                <option value="252">Years</option>
+              </select>
+            </div>
+            <p class="field-hint" id="sp-period-hint"></p>
+          </div>
+          <div class="field">
+            <label for="sp-n_paths">Number of Simulations (Monte Carlo)
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="Number of simulated paths (1–10,000). Every statistic uses all paths; days × paths may not exceed 5,000,000."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <input id="sp-n_paths" name="n_paths" type="number" step="1" min="1" max="10000" required>
+          </div>
+          <div class="field">
+            <label for="sp-model">Distribution Type
+              <button type="button" class="info" aria-label="About this input"
+                      data-tip="Distribution of the daily shocks Z in GBM: normal (classic), Student-t (heavy tails) or resampled historical USD/INR returns."><svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg></button>
+            </label>
+            <select id="sp-model" name="model"></select>
+          </div>
+          <div class="field" data-show-when="gbm_student_t" hidden>
+            <label for="sp-t_df">Degrees of Freedom (Student-t)</label>
+            <input id="sp-t_df" name="t_df" type="number" step="any" min="3" max="100">
+          </div>
+          <details class="advanced">
+            <summary>Advanced</summary>
+            <div class="field">
+              <label for="sp-seed">Random Seed <span class="unit">optional, for reproducible results</span></label>
+              <input id="sp-seed" name="seed" type="number" step="1" min="1" max="2147483647" placeholder="random">
+            </div>
+          </details>
+          <div class="params-actions">
+            <button class="btn btn-primary btn-block" type="submit">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-play"/></svg><span>Run Simulation</span>
+            </button>
+            <button class="btn btn-secondary btn-block" type="button" data-action="reset">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-refresh-cw"/></svg><span>Reset Parameters</span>
+            </button>
+          </div>
+          <div class="params-message" id="params-message" aria-live="polite"></div>
+        </form>
+      </section>
+
+      <div class="kpis" id="kpis" aria-live="polite">
+        <article class="kpi glass" id="kpi-rate">
+          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-trending-up"/></svg></span>
+          <div class="kpi-body">
+            <p class="kpi-label">Latest Exchange Rate (USD/INR)</p>
+            <p class="kpi-value" data-kpi="value">—</p>
+            <p class="kpi-sub" data-kpi="sub">Loading historical data…</p>
+          </div>
+          <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </article>
+        <article class="kpi glass" id="kpi-mean">
+          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-column"/></svg></span>
+          <div class="kpi-body">
+            <p class="kpi-label">Mean Exchange Rate (Simulated)</p>
+            <p class="kpi-value" data-kpi="value">—</p>
+            <p class="kpi-sub" data-kpi="sub">Run a simulation</p>
+          </div>
+          <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </article>
+        <article class="kpi glass" id="kpi-vol">
+          <span class="kpi-icon tone-violet" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-shield"/></svg></span>
+          <div class="kpi-body">
+            <p class="kpi-label">Volatility (σ)</p>
+            <p class="kpi-value" data-kpi="value">—</p>
+            <p class="kpi-sub" data-kpi="sub">Run a simulation</p>
+          </div>
+          <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </article>
+        <article class="kpi glass" id="kpi-return">
+          <span class="kpi-icon tone-green" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-pie"/></svg></span>
+          <div class="kpi-body">
+            <p class="kpi-label">Total Return <span data-kpi="period"></span></p>
+            <p class="kpi-value" data-kpi="value">—</p>
+            <p class="kpi-sub" data-kpi="sub">Run a simulation</p>
+          </div>
+          <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </article>
+      </div>
+
+      <section class="panel glass panel-main" id="panel-paths" aria-labelledby="paths-title">
+        <header class="panel-head">
+          <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-line"/></svg></span>
+          <h2 id="paths-title">Simulated Exchange Rate Path</h2>
+          <ul class="legend" aria-label="Legend">
+            <li><span class="swatch swatch-line swatch-paths"></span>Simulated Paths</li>
+            <li><span class="swatch swatch-line swatch-mean"></span>Mean Path</li>
+          </ul>
+          <label class="sr-only" for="paths-select">Paths drawn</label>
+          <select class="chip-select" id="paths-select" disabled><option>All Paths</option></select>
+          <button class="icon-btn" type="button" data-download="chart-paths" aria-label="Download chart as PNG" disabled>
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-download"/></svg></button>
+          <button class="icon-btn" type="button" data-expand="panel-paths" aria-label="Expand chart to full screen">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-maximize-2"/></svg></button>
+        </header>
+        <div class="panel-chart">
+          <canvas id="chart-paths" role="img" aria-label="Simulated USD/INR paths and their mean path"></canvas>
+          <div class="chart-state" data-state-for="chart-paths">Waiting for the R backend…</div>
+        </div>
+      </section>
+
+      <div class="lower">
+        <section class="panel glass panel-dist" id="panel-dist" aria-labelledby="dist-title">
+          <header class="panel-head">
+            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-column"/></svg></span>
+            <h2 id="dist-title">Distribution of Daily Returns</h2>
+            <button class="icon-btn" type="button" data-download="chart-dist" aria-label="Download chart as PNG" disabled>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-download"/></svg></button>
+            <button class="icon-btn" type="button" data-expand="panel-dist" aria-label="Expand panel to full screen">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-maximize-2"/></svg></button>
+          </header>
+          <div class="dist-body">
+            <div class="dist-chart">
+              <ul class="legend" aria-label="Legend">
+                <li><span class="swatch swatch-bar"></span>Simulated Returns</li>
+                <li><span class="swatch swatch-line swatch-normal"></span>Normal Distribution</li>
+              </ul>
+              <div class="panel-chart">
+                <canvas id="chart-dist" role="img" aria-label="Histogram of simulated daily returns with a normal curve"></canvas>
+                <div class="chart-state" data-state-for="chart-dist">Waiting for the R backend…</div>
+              </div>
+            </div>
+            <div class="dist-side">
+              <div class="stat-box" id="dist-stats">
+                <p class="stat-box-title">Summary Statistics</p>
+                <dl>
+                  <div><dt>Mean</dt><dd data-stat="mean">—</dd></div>
+                  <div><dt>Std. Deviation</dt><dd data-stat="sd">—</dd></div>
+                  <div><dt>Variance</dt><dd data-stat="variance">—</dd></div>
+                  <div><dt>Skewness</dt><dd data-stat="skewness">—</dd></div>
+                  <div><dt>Kurtosis</dt><dd data-stat="kurtosis">—</dd></div>
+                </dl>
+              </div>
+              <div class="stat-box stat-box-good" id="dist-normality">
+                <p class="stat-box-title">Normality Test</p>
+                <p class="stat-box-sub" data-stat="range">P(−2σ &lt; R &lt; 2σ)</p>
+                <p class="stat-box-value" data-stat="share">—</p>
+                <p class="stat-box-note" data-stat="note"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel glass panel-mc" id="panel-mc" aria-labelledby="mc-title">
+          <header class="panel-head">
+            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-box"/></svg></span>
+            <h2 id="mc-title">Monte Carlo Simulation</h2>
+            <label class="sr-only" for="mc-paths-select">Paths shown</label>
+            <select class="chip-select" id="mc-paths-select" disabled><option>Show 50 Paths</option></select>
+            <button class="icon-btn" type="button" data-download="chart-mc" aria-label="Download chart as PNG" disabled>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-download"/></svg></button>
+            <button class="icon-btn" type="button" data-expand="panel-mc" aria-label="Expand panel to full screen">
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-maximize-2"/></svg></button>
+          </header>
+          <ul class="legend legend-inline" aria-label="Legend">
+            <li><span class="swatch swatch-line swatch-paths"></span>Simulated Paths</li>
+            <li><span class="swatch swatch-line swatch-mean"></span>Mean Path</li>
+          </ul>
+          <div class="panel-chart panel-chart-mc">
+            <canvas id="chart-mc" role="img" aria-label="Sample of simulated paths with the 5–95% band and mean path"></canvas>
+            <div class="chart-state" data-state-for="chart-mc">Waiting for the R backend…</div>
+          </div>
+          <div class="mc-cards">
+            <div class="mc-card tone-red"><p>Lowest Path</p><p class="mc-value" data-mc="low">—</p></div>
+            <div class="mc-card tone-green"><p>Highest Path</p><p class="mc-value" data-mc="high">—</p></div>
+            <div class="mc-card tone-blue"><p>Final Mean Rate</p><p class="mc-value" data-mc="mean">—</p></div>
+          </div>
+        </section>
+      </div>
+      <p class="footnote" id="dash-footnote">All values are computed in R. Rates in INR per USD.</p>
+    </section>
+
+    <!-- ===================== DISTRIBUTION ANALYSIS: DESCRIPTIVE STATISTICS ===================== -->
+    <section class="view" id="view-descriptive" data-title="Descriptive Statistics" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Analyze · Distribution</p>
+        <h1 class="page-title">Descriptive <span class="accent">Statistics</span></h1>
+        <p class="page-sub">Measures of centre, spread and shape. Variance and standard deviation are <strong>sample</strong>
+          statistics (divisor n − 1). Quantiles use R's default (type 7).</p>
+      </header>
+      <nav class="tabs" aria-label="Distribution analysis">
+        <a href="#/descriptive" aria-current="page">Descriptive Statistics</a>
+        <a href="#/distributions">Probability Distributions</a>
+      </nav>
+      <form class="panel glass form-grid" id="desc-form" novalidate>
+        <fieldset class="field full">
+          <legend>Data source</legend>
+          <label class="inline"><input type="radio" name="source" value="historical" checked> Historical USD/INR data</label>
+          <label class="inline"><input type="radio" name="source" value="custom"> Enter my own numbers</label>
+        </fieldset>
+        <div class="field" data-source="historical">
+          <label for="desc-variable">Variable</label>
+          <select id="desc-variable" name="variable">
+            <option value="log_return">Daily log return (%)</option>
+            <option value="simple_return">Daily simple return (%)</option>
+            <option value="level">Exchange-rate level (INR per USD)</option>
+          </select>
+        </div>
+        <div class="field" data-source="historical">
+          <label for="desc-start_date">Start date</label>
+          <input id="desc-start_date" name="start_date" type="date">
+        </div>
+        <div class="field" data-source="historical">
+          <label for="desc-end_date">End date</label>
+          <input id="desc-end_date" name="end_date" type="date">
+        </div>
+        <div class="field full" data-source="custom" hidden>
+          <label for="desc-values">Values <span class="unit">separated by commas, spaces or new lines</span></label>
+          <textarea id="desc-values" name="values" rows="4" placeholder="e.g. 83.1, 83.4, 83.2, 83.9, 84.0"></textarea>
+        </div>
+        <div class="field" data-source="custom" hidden>
+          <label for="desc-data_type">The values are</label>
+          <select id="desc-data_type" name="data_type">
+            <option value="sample">A sample of numbers</option>
+            <option value="prices">Prices / exchange rates in time order</option>
+          </select>
+        </div>
+        <div class="actions full">
+          <button class="btn btn-primary" type="submit">Calculate statistics</button>
+        </div>
+      </form>
+      <div class="results" id="desc-results" aria-live="polite">
+        <div class="empty">Choose the data and click <strong>Calculate statistics</strong>.</div>
+      </div>
+    </section>
+
+    <!-- ===================== DISTRIBUTION ANALYSIS: PROBABILITY DISTRIBUTIONS ===================== -->
+    <section class="view" id="view-distributions" data-title="Probability Distributions" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Analyze · Distribution</p>
+        <h1 class="page-title">Probability <span class="accent">Distributions</span></h1>
+        <p class="page-sub">Density or mass function, cumulative distribution, quantiles and moments, plus a random sample
+          drawn in R to compare with theory (Law of Large Numbers).</p>
+      </header>
+      <nav class="tabs" aria-label="Distribution analysis">
+        <a href="#/descriptive">Descriptive Statistics</a>
+        <a href="#/distributions" aria-current="page">Probability Distributions</a>
+      </nav>
+      <form class="panel glass form-grid" id="dist-form" novalidate>
+        <div class="field">
+          <label for="dist-distribution">Distribution</label>
+          <select id="dist-distribution" name="distribution"></select>
+        </div>
+        <div class="field-group full" id="dist-params"></div>
+        <div class="field">
+          <label for="dist-query_type">Probability to calculate</label>
+          <select id="dist-query_type" name="query_type">
+            <option value="less_equal">P(X ≤ a)</option>
+            <option value="greater">P(X &gt; a)</option>
+            <option value="between">P(a ≤ X ≤ b)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="dist-query_a">a</label>
+          <input id="dist-query_a" name="query.a" type="number" step="any" value="1">
+        </div>
+        <div class="field" id="dist-b-field">
+          <label for="dist-query_b">b</label>
+          <input id="dist-query_b" name="query.b" type="number" step="any" value="2">
+        </div>
+        <div class="field">
+          <label for="dist-quantile_p">Quantile for probability p <span class="unit">0 &lt; p &lt; 1</span></label>
+          <input id="dist-quantile_p" name="quantile_p" type="number" step="any" min="0.0001" max="0.9999" value="0.95">
+        </div>
+        <div class="field">
+          <label for="dist-sample_size">Random sample size <span class="unit">1–100,000</span></label>
+          <input id="dist-sample_size" name="sample_size" type="number" step="1" min="1" max="100000" value="1000">
+        </div>
+        <div class="field">
+          <label for="dist-seed">Random seed <span class="unit">optional</span></label>
+          <input id="dist-seed" name="seed" type="number" step="1" min="1" max="2147483647" value="2026">
+        </div>
+        <div class="actions full">
+          <button class="btn btn-primary" type="submit">Calculate</button>
+        </div>
+      </form>
+      <div class="results" id="dist-results" aria-live="polite">
+        <div class="empty">Choose a distribution and click <strong>Calculate</strong>.</div>
+      </div>
+    </section>
+
+    <!-- ===================== MONTE CARLO (detailed) ===================== -->
+    <section class="view" id="view-monte-carlo" data-title="Monte Carlo Simulation" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Simulate · Monte Carlo</p>
+        <h1 class="page-title">Monte Carlo <span class="accent">Simulation</span></h1>
+        <p class="page-sub">A detailed look at the current simulation: percentile bands, the distribution of the final
+          rate against exact GBM theory, threshold probabilities and convergence. Every statistic uses <strong>all</strong>
+          paths.</p>
+      </header>
+      <form class="panel glass mc-toolbar" id="mc-form" novalidate>
+        <p class="mc-params" id="mc-params" aria-live="polite">No simulation yet.</p>
+        <div class="form-grid">
+          <div class="field">
+            <label for="mc-paths-drawn">Paths drawn on the chart</label>
+            <select id="mc-paths-drawn" name="paths_drawn" disabled><option>—</option></select>
+          </div>
+          <div class="field">
+            <label for="mc-threshold">Threshold rate <span class="unit">INR per USD</span></label>
+            <input id="mc-threshold" name="threshold" type="number" step="any" min="0.0001" required>
+          </div>
+          <div class="actions">
+            <button class="btn btn-primary" type="submit">Calculate probabilities</button>
+          </div>
+        </div>
+        <p class="form-note">The simulation inputs (starting rate, drift, volatility, period, number of paths, distribution,
+          seed) are set in <strong>Simulation Parameters</strong> on the <a class="link" href="#/dashboard">Exchange Rate
+          Dashboard</a>. The threshold probabilities are computed by R for the same simulation (same inputs and seed).</p>
+      </form>
+      <div class="results" id="mc-results" aria-live="polite">
+        <div class="empty">Waiting for the current simulation from R…</div>
+      </div>
+    </section>
+
+    <!-- ===================== HYPOTHESIS TESTING ===================== -->
+    <section class="view" id="view-hypothesis" data-title="Hypothesis Testing" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Analyze · Inference</p>
+        <h1 class="page-title">Hypothesis <span class="accent">Testing</span></h1>
+        <p class="page-sub">Formal tests on USD/INR returns or your own data. "Fail to reject H<sub>0</sub>" means the data do
+          not provide enough evidence against H<sub>0</sub>; it never proves that H<sub>0</sub> is true.</p>
+      </header>
+      <form class="panel glass form-grid" id="hyp-form" novalidate>
+        <div class="field">
+          <label for="hyp-test">Test</label>
+          <select id="hyp-test" name="test">
+            <option value="one_sample_t">One-sample t-test for the mean</option>
+            <option value="confidence_interval">Confidence intervals (mean, variance, SD)</option>
+            <option value="normality">Normality (Shapiro-Wilk, Jarque-Bera)</option>
+            <option value="two_sample_t">Two-sample Welch t-test (compare means)</option>
+            <option value="variance_equality">Equal variances (F-test, Brown-Forsythe)</option>
+            <option value="autocorrelation">Autocorrelation (Ljung-Box)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="hyp-alpha">Significance level α</label>
+          <select id="hyp-alpha" name="alpha" data-number>
+            <option value="0.01">0.01 (99% confidence)</option>
+            <option value="0.05" selected>0.05 (95% confidence)</option>
+            <option value="0.1">0.10 (90% confidence)</option>
+          </select>
+        </div>
+        <fieldset class="field full">
+          <legend>Data source</legend>
+          <label class="inline"><input type="radio" name="source" value="historical" checked> Historical USD/INR data</label>
+          <label class="inline"><input type="radio" name="source" value="custom"> Enter my own numbers</label>
+        </fieldset>
+        <div class="field" data-source="historical">
+          <label for="hyp-variable">Variable</label>
+          <select id="hyp-variable" name="variable">
+            <option value="log_return">Daily log return (%)</option>
+            <option value="simple_return">Daily simple return (%)</option>
+            <option value="level">Exchange-rate level (not recommended)</option>
+          </select>
+        </div>
+        <div class="field" data-source="historical">
+          <label for="hyp-start_date">Start date</label>
+          <input id="hyp-start_date" name="start_date" type="date">
+        </div>
+        <div class="field" data-source="historical">
+          <label for="hyp-end_date">End date</label>
+          <input id="hyp-end_date" name="end_date" type="date">
+        </div>
+        <div class="field" data-source="historical" data-tests="two_sample_t variance_equality">
+          <label for="hyp-split_date">Split date <span class="unit">group 2 starts here</span></label>
+          <input id="hyp-split_date" name="split_date" type="date" value="2021-01-01">
+        </div>
+        <div class="field full" data-source="custom" hidden>
+          <label for="hyp-values">Sample <span id="hyp-values-label-suffix">values</span> <span class="unit">commas, spaces or new lines</span></label>
+          <textarea id="hyp-values" name="values" rows="3" placeholder="e.g. 0.12, -0.05, 0.31, 0.02, -0.11, 0.08"></textarea>
+        </div>
+        <div class="field full" data-source="custom" data-tests="two_sample_t variance_equality" hidden>
+          <label for="hyp-values2">Sample 2 values</label>
+          <textarea id="hyp-values2" name="values2" rows="3"></textarea>
+        </div>
+        <div class="field" data-tests="one_sample_t">
+          <label for="hyp-mu0">Hypothesised mean μ<sub>0</sub></label>
+          <input id="hyp-mu0" name="mu0" type="number" step="any" value="0">
+        </div>
+        <div class="field" data-tests="one_sample_t two_sample_t">
+          <label for="hyp-alternative">Alternative hypothesis</label>
+          <select id="hyp-alternative" name="alternative">
+            <option value="two.sided">Two-sided (≠)</option>
+            <option value="greater">Greater than (&gt;)</option>
+            <option value="less">Less than (&lt;)</option>
+          </select>
+        </div>
+        <div class="field" data-tests="autocorrelation">
+          <label for="hyp-lag">Ljung-Box lag <span class="unit">1–50</span></label>
+          <input id="hyp-lag" name="lag" type="number" step="1" min="1" max="50" value="10">
+        </div>
+        <div class="actions full">
+          <button class="btn btn-primary" type="submit">Run test</button>
+        </div>
+      </form>
+      <div class="results" id="hyp-results" aria-live="polite">
+        <div class="empty">Choose a test and click <strong>Run test</strong>.</div>
+      </div>
+    </section>
+
+    <!-- ===================== CORRELATION & REGRESSION ===================== -->
+    <section class="view" id="view-regression" data-title="Correlation and Regression" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Analyze · Relationships</p>
+        <h1 class="page-title">Correlation &amp; <span class="accent">Regression</span></h1>
+        <p class="page-sub">Simple linear regression y = b<sub>0</sub> + b<sub>1</sub>x + e fitted by ordinary least squares in
+          R, with Pearson and Spearman correlation and residual diagnostics. Association is not causation.</p>
+      </header>
+      <form class="panel glass form-grid" id="reg-form" novalidate>
+        <div class="field full">
+          <label for="reg-model">Model</label>
+          <select id="reg-model" name="model">
+            <option value="returns_vs_dollar_index">USD/INR daily returns vs Broad U.S. Dollar Index daily returns (FRED)</option>
+            <option value="time_trend">USD/INR level vs time (linear trend)</option>
+            <option value="custom">My own paired data (x, y)</option>
+          </select>
+        </div>
+        <div class="field" data-models="returns_vs_dollar_index time_trend">
+          <label for="reg-start_date">Start date</label>
+          <input id="reg-start_date" name="start_date" type="date">
+        </div>
+        <div class="field" data-models="returns_vs_dollar_index time_trend">
+          <label for="reg-end_date">End date</label>
+          <input id="reg-end_date" name="end_date" type="date">
+        </div>
+        <div class="field" data-models="custom" hidden>
+          <label for="reg-x_label">x label</label>
+          <input id="reg-x_label" name="x_label" type="text" maxlength="60" placeholder="x">
+        </div>
+        <div class="field" data-models="custom" hidden>
+          <label for="reg-y_label">y label</label>
+          <input id="reg-y_label" name="y_label" type="text" maxlength="60" placeholder="y">
+        </div>
+        <div class="field full" data-models="custom" hidden>
+          <label for="reg-x">x values</label>
+          <textarea id="reg-x" name="x" rows="3" placeholder="e.g. 1, 2, 3, 4, 5, 6"></textarea>
+        </div>
+        <div class="field full" data-models="custom" hidden>
+          <label for="reg-y">y values <span class="unit">same number of values as x, in the same order</span></label>
+          <textarea id="reg-y" name="y" rows="3" placeholder="e.g. 2.1, 3.9, 6.2, 8.1, 9.8, 12.2"></textarea>
+        </div>
+        <div class="field">
+          <label for="reg-alpha">Significance level α</label>
+          <select id="reg-alpha" name="alpha" data-number>
+            <option value="0.01">0.01</option>
+            <option value="0.05" selected>0.05</option>
+            <option value="0.1">0.10</option>
+          </select>
+        </div>
+        <div class="actions full">
+          <button class="btn btn-primary" type="submit">Fit model</button>
+        </div>
+      </form>
+      <div class="results" id="reg-results" aria-live="polite">
+        <div class="empty">Choose a model and click <strong>Fit model</strong>.</div>
+      </div>
+    </section>
+
+    <!-- ===================== HISTORICAL DATA ===================== -->
+    <section class="view" id="view-historical" data-title="Historical Data" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Explore · Historical Data</p>
+        <h1 class="page-title">Historical <span class="accent">Analysis</span></h1>
+        <p class="page-sub">Levels, daily log returns and rolling volatility of USD/INR. Choose a date window, or upload your
+          own CSV file (format <code>Date,USDINR</code>, dates as YYYY-MM-DD).</p>
+      </header>
+      <form class="panel glass form-grid" id="hist-form" novalidate>
+        <div class="field">
+          <label for="hist-start_date">Start date</label>
+          <input id="hist-start_date" name="start_date" type="date">
+        </div>
+        <div class="field">
+          <label for="hist-end_date">End date</label>
+          <input id="hist-end_date" name="end_date" type="date">
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" type="submit">Analyse window</button>
+          <button class="btn btn-secondary" type="button" data-action="full">Full dataset</button>
+        </div>
+      </form>
+      <form class="panel glass" id="upload-form" novalidate>
+        <h2 class="panel-title">Use your own data</h2>
+        <p class="hint">CSV with a header row <code>Date,USDINR</code>; one row per date; positive rates in INR per USD.
+          Blank or <code>NA</code> values mark days without a rate and are excluded (never filled in). FRED downloads
+          (<code>observation_date,DEXINUS</code>) are accepted. Maximum 5 MB.</p>
+        <div class="upload-row">
+          <label class="sr-only" for="upload-file">CSV file</label>
+          <input id="upload-file" name="file" type="file" accept=".csv,text/csv">
+          <button class="btn btn-primary" type="submit">
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-upload"/></svg><span>Upload and validate</span></button>
+          <button class="btn btn-secondary" type="button" data-action="reset-data">Use bundled FRED data</button>
+        </div>
+        <div id="upload-message" aria-live="polite"></div>
+      </form>
+      <div class="results" id="hist-results" aria-live="polite">
+        <div class="empty">Loading historical data from R…</div>
+      </div>
+    </section>
+
+    <!-- ===================== ABOUT ===================== -->
+    <section class="view prose" id="view-about" data-title="About Project" hidden>
+      <header class="page-head">
+        <p class="eyebrow">About · FXLab</p>
+        <h1 class="page-title">About the <span class="accent">Project</span></h1>
+        <p class="page-sub">FXLab is a Probability and Statistics project that studies how the U.S. dollar – Indian rupee
+          exchange rate moves, how volatile it is, and how probability models can describe its future.</p>
+      </header>
+      <div class="about-grid">
+        <div class="panel glass">
+          <h2>How it works</h2>
+          <ol>
+            <li>You choose an analysis and its inputs in this web page (HTML, CSS, JavaScript).</li>
+            <li>The page sends a JSON request to the R backend, an <strong>R Plumber</strong> API running on your computer.</li>
+            <li>R validates the request and performs every statistical calculation.</li>
+            <li>R returns structured JSON; the page draws tables and charts from it (Chart.js). The browser never computes statistics.</li>
+          </ol>
+          <p>The status button (top right) shows whether the R backend is reachable. The API can also be explored at
+            <a href="/__docs__/">/__docs__/</a> while the backend is running.</p>
+        </div>
+        <div class="panel glass">
+          <h2>Data</h2>
+          <p>USD/INR: FRED series <a href="https://fred.stlouisfed.org/series/DEXINUS" rel="noopener" target="_blank">DEXINUS</a>
+            (Indian rupees per U.S. dollar, noon buying rates in New York; Board of Governors of the Federal Reserve System,
+            H.10 release). Broad dollar strength: FRED series
+            <a href="https://fred.stlouisfed.org/series/DTWEXBGS" rel="noopener" target="_blank">DTWEXBGS</a>
+            (Nominal Broad U.S. Dollar Index). The files are stored locally in <code>data/</code>; the app does not fetch live
+            rates, so the latest value is always labelled with its date and is <em>not</em> a live quote. Days without a
+            published rate (holidays) are excluded and counted, never filled in.</p>
+        </div>
+        <div class="panel glass">
+          <h2>Methods and formulas</h2>
+          <ul>
+            <li>Log return: r<sub>t</sub> = 100 · ln(S<sub>t</sub> / S<sub>t−1</sub>) %; simple return: R<sub>t</sub> = 100 · (S<sub>t</sub> / S<sub>t−1</sub> − 1) %.</li>
+            <li>Sample variance s² = Σ(x − x̄)² / (n − 1); skewness m<sub>3</sub>/m<sub>2</sub><sup>3/2</sup>; kurtosis m<sub>4</sub>/m<sub>2</sub>² (normal = 3).</li>
+            <li>Volatility = SD of daily log returns; annualised volatility = daily SD × √252.</li>
+            <li>GBM: S<sub>t+Δt</sub> = S<sub>t</sub> · exp[(μ − σ²/2)Δt + σ√Δt · Z], Δt = 1 trading day, so E[S<sub>T</sub>] = S<sub>0</sub>e<sup>μT</sup>.</li>
+            <li>Monte Carlo standard error of the mean = SD / √N; probability intervals use the Wilson score method.</li>
+            <li>Tests: Student and Welch t-tests, chi-square and F intervals/tests, Brown-Forsythe, Jarque-Bera, Shapiro-Wilk, Ljung-Box, Newey-West robust mean test.</li>
+            <li>Regression: OLS with classical and HC1 (heteroskedasticity-robust) standard errors, Durbin-Watson and Breusch-Pagan diagnostics.</li>
+          </ul>
+        </div>
+        <div class="panel glass">
+          <h2>Assumptions and limitations</h2>
+          <ul>
+            <li>GBM assumes constant drift and volatility and independent shocks. Real USD/INR returns have heavier tails and
+              volatility clustering, and the Reserve Bank of India intervenes in the market. Simulations are illustrations,
+              not forecasts.</li>
+            <li>Annualising with √252 assumes roughly uncorrelated daily returns and 252 trading days per year.</li>
+            <li>With thousands of observations, tests detect even tiny effects: always judge practical size as well as p-values.</li>
+            <li>A regression of the exchange-rate level on time is descriptive only: levels are non-stationary, so its
+              standard errors are not reliable.</li>
+          </ul>
+        </div>
+        <div class="panel glass">
+          <h2>Credits</h2>
+          <p>Statistics: R and Plumber. Charts: Chart.js (MIT). Icons: Lucide (ISC). Font: Inter (SIL Open Font Licence).
+            Background: original generated artwork. Data: FRED, Federal Reserve Bank of St. Louis.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/vendor/chart.umd.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/format.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/sim-params.js"></script>
+  <script src="js/sections/dashboard.js"></script>
+  <script src="js/sections/historical.js"></script>
+  <script src="js/sections/descriptive.js"></script>
+  <script src="js/sections/distributions.js"></script>
+  <script src="js/sections/montecarlo.js"></script>
+  <script src="js/sections/hypothesis.js"></script>
+  <script src="js/sections/regression.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

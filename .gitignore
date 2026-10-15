@@ -1,0 +1,19 @@
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rcheck/
+
+# Test and run artefacts
+tests/testthat/_snaps/
+*.log
+
+# Local secrets or environment overrides (FXLab needs none; keep them out of git)
+.Renviron
+.env
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
