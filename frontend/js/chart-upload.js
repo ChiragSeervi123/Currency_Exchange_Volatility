@@ -92,7 +92,7 @@
       submit.appendChild(ui.el('span', { class: 'spinner', 'aria-hidden': 'true' }));
       submit.appendChild(ui.el('span', { text: 'R is reading the chart…' }));
     } else {
-      submit.insertAdjacentHTML('beforeend', '<svg class="icon icon-line" aria-hidden="true"><use href="assets/icons.svg#i-scan-line"/></svg>');
+      submit.insertAdjacentHTML('beforeend', '<svg class="icon icon-line" aria-hidden="true"><use href="assets/icons.svg?v=3#i-scan-line"/></svg>');
       submit.appendChild(ui.el('span', { text: 'Analyze Chart' }));
     }
     document.getElementById('view-dashboard').classList.toggle('is-busy', on);

@@ -7,6 +7,7 @@
   <meta name="description" content="FXLab - Currency Exchange Rate and Volatility Analysis Using R: statistics of an uploaded chart screenshot">
   <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="report.css">
 </head>
 <body>
   <div class="backdrop-scene" aria-hidden="true"></div>
@@ -15,7 +16,7 @@
   <!-- ===================== TOP BAR ===================== -->
   <header class="topbar">
     <a class="brand" href="#/dashboard" aria-label="FXLab dashboard">
-      <svg class="icon brand-mark" aria-hidden="true"><use href="assets/icons.svg#i-chart-no-axes-column-increasing"/></svg>
+      <svg class="icon brand-mark" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-no-axes-column-increasing"/></svg>
       <span class="brand-text">
         <span class="brand-name">FX<span class="accent">Lab</span></span>
         <span class="brand-sub">Currency Exchange &amp;<br>Volatility Analysis</span>
@@ -24,9 +25,9 @@
     <div class="topbar-tools">
       <div class="popover-wrap">
         <button class="pill" type="button" id="pair-button" aria-expanded="false" aria-controls="pair-pop">
-          <svg class="icon pill-icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-line"/></svg>
+          <svg class="icon pill-icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-line"/></svg>
           <span id="pair-label">No chart yet</span>
-          <svg class="icon icon-sm" aria-hidden="true"><use href="assets/icons.svg#i-chevron-down"/></svg>
+          <svg class="icon icon-sm" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chevron-down"/></svg>
         </button>
         <div class="popover glass" id="pair-pop" hidden>
           <p class="popover-title" id="pair-title">No chart uploaded yet</p>
@@ -42,7 +43,7 @@
       <div class="popover-wrap">
         <button class="avatar" type="button" id="status-button" aria-expanded="false" aria-controls="status-pop"
                 aria-label="R backend status: checking">
-          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-activity"/></svg>
+          <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-activity"/></svg>
           <span class="status-dot" aria-hidden="true"></span>
         </button>
         <div class="popover glass popover-right" id="status-pop" hidden>
@@ -60,27 +61,31 @@
   <!-- ===================== FLOATING NAVIGATION RAIL ===================== -->
   <nav class="rail" id="app-nav" aria-label="Sections">
     <a class="rail-btn" href="#/dashboard" data-view="dashboard">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-line"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-line"/></svg>
       <span class="rail-label">Chart Analysis Dashboard</span>
     </a>
     <a class="rail-btn" href="#/descriptive" data-view="descriptive distributions">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-no-axes-column"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-no-axes-column"/></svg>
       <span class="rail-label">Distribution Analysis</span>
     </a>
     <a class="rail-btn" href="#/hypothesis" data-view="hypothesis">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-flask-conical"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-flask-conical"/></svg>
       <span class="rail-label">Hypothesis Testing</span>
     </a>
     <a class="rail-btn" href="#/regression" data-view="regression">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-chart-spline"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-spline"/></svg>
       <span class="rail-label">Correlation &amp; Regression</span>
     </a>
     <a class="rail-btn" href="#/data" data-view="data">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-database"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-database"/></svg>
       <span class="rail-label">Chart Data</span>
     </a>
+    <a class="rail-btn" href="#/report" data-view="report">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-file-text"/></svg>
+      <span class="rail-label">Report</span>
+    </a>
     <a class="rail-btn" href="#/about" data-view="about">
-      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-info"/></svg>
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-info"/></svg>
       <span class="rail-label">About Project</span>
     </a>
   </nav>
@@ -96,7 +101,7 @@
       <!-- Chart Upload: the only input of the application (POST /chart/analyze). -->
       <section class="sim-params glass" id="chart-upload" aria-labelledby="upload-title">
         <div class="params-head">
-          <span class="params-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-upload"/></svg></span>
+          <span class="params-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-upload"/></svg></span>
           <h2 id="upload-title">Chart Upload</h2>
         </div>
         <p class="params-sub">Upload a screenshot of a chart. R reads the candles and the price axis from the image and runs every analysis on them.</p>
@@ -104,7 +109,7 @@
           <label class="dropzone" id="dropzone" for="chart-file">
             <input id="chart-file" name="image" type="file" accept="image/png,image/jpeg" class="sr-only">
             <span class="dropzone-empty">
-              <svg class="icon dropzone-icon" aria-hidden="true"><use href="assets/icons.svg#i-image"/></svg>
+              <svg class="icon dropzone-icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-image"/></svg>
               <span class="dropzone-title">Drop a chart screenshot here</span>
               <span class="dropzone-hint">or <span class="link">browse</span> · PNG or JPEG, up to 8 MB</span>
             </span>
@@ -139,10 +144,10 @@
           </details>
           <div class="params-actions">
             <button class="btn btn-primary btn-block" type="submit" disabled>
-              <svg class="icon icon-line" aria-hidden="true"><use href="assets/icons.svg#i-scan-line"/></svg><span>Analyze Chart</span>
+              <svg class="icon icon-line" aria-hidden="true"><use href="assets/icons.svg?v=3#i-scan-line"/></svg><span>Analyze Chart</span>
             </button>
             <button class="btn btn-secondary btn-block" type="button" data-action="clear">
-              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-refresh-cw"/></svg><span>Clear</span>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-refresh-cw"/></svg><span>Clear</span>
             </button>
           </div>
           <div class="params-message" id="upload-message" aria-live="polite"></div>
@@ -151,7 +156,7 @@
 
       <div class="kpis" id="kpis" aria-live="polite">
         <article class="kpi glass" id="kpi-last">
-          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-trending-up"/></svg></span>
+          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-trending-up"/></svg></span>
           <div class="kpi-body">
             <p class="kpi-label">Last Price <span data-kpi="name"></span></p>
             <p class="kpi-value" data-kpi="value">—</p>
@@ -160,7 +165,7 @@
           <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
         </article>
         <article class="kpi glass" id="kpi-mean">
-          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-column"/></svg></span>
+          <span class="kpi-icon tone-blue" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-chart-column"/></svg></span>
           <div class="kpi-body">
             <p class="kpi-label">Mean Price (Chart)</p>
             <p class="kpi-value" data-kpi="value">—</p>
@@ -169,7 +174,7 @@
           <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
         </article>
         <article class="kpi glass" id="kpi-vol">
-          <span class="kpi-icon tone-violet" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-shield"/></svg></span>
+          <span class="kpi-icon tone-violet" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-shield"/></svg></span>
           <div class="kpi-body">
             <p class="kpi-label">Volatility (σ)</p>
             <p class="kpi-value" data-kpi="value">—</p>
@@ -178,7 +183,7 @@
           <svg class="spark" data-kpi="spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-hidden="true"></svg>
         </article>
         <article class="kpi glass" id="kpi-return">
-          <span class="kpi-icon tone-green" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-pie"/></svg></span>
+          <span class="kpi-icon tone-green" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-chart-pie"/></svg></span>
           <div class="kpi-body">
             <p class="kpi-label">Total Return <span data-kpi="period"></span></p>
             <p class="kpi-value" data-kpi="value">—</p>
@@ -190,7 +195,7 @@
 
       <section class="panel glass panel-main" id="panel-series" aria-labelledby="series-title">
         <header class="panel-head">
-          <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-line"/></svg></span>
+          <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-chart-line"/></svg></span>
           <h2 id="series-title">Price Series Read from the Chart</h2>
           <ul class="legend" aria-label="Legend" id="series-legend">
             <li><span class="swatch swatch-bar swatch-up"></span>Up candle</li>
@@ -203,9 +208,9 @@
             <option value="overlay">Overlay on screenshot</option>
           </select>
           <button class="icon-btn" type="button" data-download="chart-series" aria-label="Download chart as PNG" disabled>
-            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-download"/></svg></button>
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-download"/></svg></button>
           <button class="icon-btn" type="button" data-expand="panel-series" aria-label="Expand chart to full screen">
-            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-maximize-2"/></svg></button>
+            <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-maximize-2"/></svg></button>
         </header>
         <div class="panel-chart">
           <canvas id="chart-series" role="img" aria-label="Prices read from the uploaded chart"></canvas>
@@ -220,12 +225,12 @@
       <div class="lower">
         <section class="panel glass panel-dist" id="panel-dist" aria-labelledby="dist-title">
           <header class="panel-head">
-            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-chart-column"/></svg></span>
+            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-chart-column"/></svg></span>
             <h2 id="dist-title">Distribution of Returns</h2>
             <button class="icon-btn" type="button" data-download="chart-dist" aria-label="Download chart as PNG" disabled>
-              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-download"/></svg></button>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-download"/></svg></button>
             <button class="icon-btn" type="button" data-expand="panel-dist" aria-label="Expand panel to full screen">
-              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg#i-maximize-2"/></svg></button>
+              <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-maximize-2"/></svg></button>
           </header>
           <div class="dist-body">
             <div class="dist-chart">
@@ -261,7 +266,7 @@
 
         <section class="panel glass panel-mc panel-outlook" id="panel-outlook" aria-labelledby="outlook-title">
           <header class="panel-head">
-            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg#i-flask-conical"/></svg></span>
+            <span class="panel-icon" aria-hidden="true"><svg class="icon"><use href="assets/icons.svg?v=3#i-flask-conical"/></svg></span>
             <h2 id="outlook-title">Our Hypothesis</h2>
             <a class="chip-link" href="#/hypothesis">All tests</a>
           </header>
@@ -341,6 +346,23 @@
       <div class="results" id="data-results" aria-live="polite"></div>
     </section>
 
+    <!-- ===================== REPORT ===================== -->
+    <section class="view" id="view-report" data-title="Report" hidden>
+      <header class="page-head no-print">
+        <p class="eyebrow">Document · Report</p>
+        <h1 class="page-title">Analysis <span class="accent">Report</span></h1>
+        <p class="page-sub">The whole analysis of the uploaded chart as one document. Download it as a file you can open in any
+          browser (charts and screenshot included), or print it / save it as PDF.</p>
+        <div class="report-actions">
+          <button class="btn btn-primary" type="button" id="report-download" disabled>
+            <svg class="icon icon-line" aria-hidden="true"><use href="assets/icons.svg?v=3#i-download"/></svg><span>Download report</span></button>
+          <button class="btn btn-secondary" type="button" id="report-print" disabled>Print / Save as PDF</button>
+        </div>
+        <div id="report-message" aria-live="polite"></div>
+      </header>
+      <div class="results" id="report-results" aria-live="polite"></div>
+    </section>
+
     <!-- ===================== ABOUT ===================== -->
     <section class="view prose" id="view-about" data-title="About Project" hidden>
       <header class="page-head">
@@ -415,6 +437,7 @@
   <script src="js/sections/hypothesis.js"></script>
   <script src="js/sections/regression.js"></script>
   <script src="js/sections/chart-data.js"></script>
+  <script src="js/sections/report.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

@@ -212,7 +212,7 @@
       ]),
       ui.el('p', { class: 'verdict-note', text: o.reasons[0] })
     );
-    body.querySelector('.verdict-icon').innerHTML = '<svg class="icon"><use href="assets/icons.svg#' + icon + '"/></svg>';
+    body.querySelector('.verdict-icon').innerHTML = '<svg class="icon"><use href="assets/icons.svg?v=3#' + icon + '"/></svg>';
     $('[data-out="expected"]').textContent = fmt.price(o.expected_price);
     $('[data-out="range"]').textContent = fmt.price(o.range_low) + ' – ' + fmt.price(o.range_high);
     $('[data-out="p"]').textContent = fmt.prob(o.p_higher, 1);

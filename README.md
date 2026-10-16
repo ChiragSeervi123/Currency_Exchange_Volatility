@@ -28,12 +28,13 @@ Browser (HTML/CSS/JS, Chart.js)  --screenshot (base64 JSON)-->  R Plumber API (b
 | **Hypothesis Testing** | The general procedure, point and interval estimates (μ and P), and nine tests at α = 0.05, each with its formula, H₀/H₁, calculated and critical values, p-value, decision and conclusion: Z-test for the mean (two- and one-tailed), Z-test for the proportion of up candles, small-sample t-test on the last 15 candles, difference of means (first vs second half), F-test for variances, χ² goodness of fit (normal), χ² test of independence (consecutive candles), one-way ANOVA (four periods). Then **Our hypothesis**: the verdict, the reasons from those results, insights from the graph and a projection chart |
 | **Correlation & Regression** | Scatter diagram of price against candle number with the least-squares line, Pearson r, Spearman rank correlation (1 − 6Σd²/n(n²−1)), multiple regression on t and t², regression of each return on the previous return, coefficient tables with HC1 robust errors, residual diagnostics |
 | **Chart Data** | How the chart was read (axis labels used, resolution, title, time labels), the extracted points drawn on the screenshot, closing prices with the high–low band, returns and rolling volatility, and a table of every extracted candle |
+| **Report** | The whole analysis as one document: summary and verdict, the chart and how it was read, descriptive statistics, probability, every hypothesis test with its formula, our hypothesis, regression and limitations, with the screenshot and four charts. **Download report** saves a standalone HTML file (charts and screenshot embedded, opens in any browser); **Print / Save as PDF** prints just the report (white paper layout) |
 | **About Project** | Methods, data, assumptions and limitations |
 
 **Interface.** The design follows `frontend/assets/fxlab-reference.png`: a blurred mountain-at-sunset scene,
 frosted-glass panels, a floating circular navigation rail and the **Chart Upload** panel on the dashboard.
 The rail has one icon per page (Dashboard, Distribution Analysis, Hypothesis Testing, Correlation &
-Regression, Chart Data, About). Chart Upload is a fixed part of the dashboard (not a pop-up). On desktop
+Regression, Chart Data, Report, About). Chart Upload is a fixed part of the dashboard (not a pop-up). On desktop
 (1200 px and wider) it is the dashboard's left column, laid out on shared lines: its top is level with the
 first rail icon and the KPI cards (the dashboard has no title block), and its bottom with the lower panels. On tablets
 and phones it appears under the title and the rail becomes a bottom bar. No other page has input fields:
@@ -83,6 +84,7 @@ pns2/                          (project folder; open FXLab.Rproj)
 │   ├── js/config.js           API base URL (the one place to change it)
 │   ├── js/api.js              API client (errors, timeouts, no duplicate requests)
 │   ├── js/ui.js, charts.js, format.js   shared helpers (display only)
+│   ├── report.css             styles of the Report page and of the downloaded report file
 │   ├── js/chart-upload.js     the Chart Upload panel and the shared analysis (FX.chart)
 │   ├── js/app.js              navigation, rail, backend status, chart popover, clock
 │   ├── js/sections/*.js       one file per page (dashboard.js = the main dashboard)
@@ -370,7 +372,7 @@ run_regression(list(model = "returns_vs_dollar_index"))$coefficients
 | `test_hypothesis.R` | t-tests vs `t.test`, CIs, JB/Shapiro-Wilk, Welch/F/Brown-Forsythe, Ljung-Box — reproducing the original report — and invalid input |
 | `test_regression.R` | OLS vs `lm`/`cor.test`, dollar-index and trend regressions vs the report, constant/mismatched/short input |
 | `test_api.R` | starts the real server: health → chart upload → current chart → image → reset; optional settings; invalid uploads (not an image, bad interval, incomplete price range, malformed JSON); the statistics endpoints; CSV upload/reset; 404; CORS; the web page; and a server with **no data files** |
-| `test_frontend.R` | headless Chrome: before an upload every page asks for a chart and no page except Chart Upload has inputs; a real file upload through the file input → the KPIs, statistics and outlook equal R's values and the overlay draws one point per extracted candle; Chart Upload is part of the dashboard only and aligned on shared lines; each rail icon opens its page (Monte Carlo is gone); every page renders without JS errors (no percentile/tail/Q-Q tables on Descriptive Statistics, one card with a formula per test on Hypothesis Testing); the analysis survives a refresh and Clear removes it; non-images and blank images give clear messages; phone layout; offline message. Skipped if Chrome/chromote is unavailable or unresponsive |
+| `test_frontend.R` | headless Chrome: before an upload every page asks for a chart and no page except Chart Upload has inputs; a real file upload through the file input → the KPIs, statistics and outlook equal R's values and the overlay draws one point per extracted candle; Chart Upload is part of the dashboard only and aligned on shared lines; each rail icon opens its page (Monte Carlo is gone); every page renders without JS errors (no percentile/tail/Q-Q tables on Descriptive Statistics, one card with a formula per test on Hypothesis Testing); the Report page contains every section and test, and its downloadable file is a complete document with embedded charts; the analysis survives a refresh and Clear removes it; non-images and blank images give clear messages; phone layout; offline message. Skipped if Chrome/chromote is unavailable or unresponsive |
 ---
 
 ## 11. Troubleshooting

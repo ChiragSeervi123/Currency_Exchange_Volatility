@@ -154,7 +154,7 @@
         ui.el('p', { class: 'verdict-text', text: o.headline + '.' })
       ])
     ]);
-    verdict.querySelector('.verdict-icon').innerHTML = '<svg class="icon"><use href="assets/icons.svg#' + icon + '"/></svg>';
+    verdict.querySelector('.verdict-icon').innerHTML = '<svg class="icon"><use href="assets/icons.svg?v=3#' + icon + '"/></svg>';
     var projGrid = ui.el('div', { class: 'grid-2' });
     root.appendChild(ui.el('section', { class: 'panel glass outlook-panel', id: 'our-hypothesis' }, [
       ui.el('h2', { class: 'panel-title', text: 'Our hypothesis' }), verdict,

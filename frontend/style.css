@@ -417,6 +417,9 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 .icon-btn .icon { width: 16px; height: 16px; }
 
 .panel-chart { position: relative; height: clamp(150px, 19vh, 260px); }
+/* The canvas never sizes its container: the panel layout alone decides the chart size, so a chart
+   that was enlarged in full screen shrinks back when full screen ends (Chart.js resizes to the box). */
+.panel-chart > canvas { position: absolute; left: 0; top: 0; }
 .panel-main .panel-chart { height: clamp(150px, 17.5vh, 300px); }
 /* Without a title block above it, the dashboard's price chart uses the freed height. */
 .view-dashboard .panel-main .panel-chart { height: clamp(180px, 27vh, 460px); }
@@ -644,6 +647,17 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   border-radius: var(--radius-sm); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
 .list-plain { margin: 0 0 12px; padding-left: 20px; color: var(--text-2); font-size: 13px; }
 .subhead { margin: 20px 0 10px; font-size: 15px; }
+
+.report-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.report-actions .btn[disabled] { cursor: not-allowed; }
+.btn-primary .icon-line { fill: none; stroke: currentColor; }
+
+/* Printing the report page: only the report itself */
+@media print {
+  .backdrop-scene, .topbar, .rail, .no-print, .skip-link, #global-banner { display: none !important; }
+  body, .workspace { background: #fff !important; padding: 0 !important; min-height: 0; }
+  .results { opacity: 1 !important; }
+}
 
 /* ---- 12. Responsive ---------------------------------------------------------------- */
 /* Below 1200px the Chart Upload panel sits in the page flow (under the title). */

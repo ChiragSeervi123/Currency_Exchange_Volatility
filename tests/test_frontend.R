@@ -108,7 +108,7 @@ test_that("before an upload the app asks for a chart and has no other inputs", {
   # The Chart Upload panel is the only place with inputs (the chart-view toggle only changes the view).
   outside <- js("Array.prototype.filter.call(document.querySelectorAll('main input, main select, main textarea'), function(e){ return !e.closest('#chart-upload') && !e.classList.contains('chip-select'); }).length")
   expect_equal(outside, 0)
-  for (v in c("descriptive", "distributions", "hypothesis", "regression", "data")) {
+  for (v in c("descriptive", "distributions", "hypothesis", "regression", "data", "report")) {
     open_view(paste0("#/", v))
     expect_true(wait_until(sprintf("!!document.querySelector('#view-%s .empty-chart')", v), 10), label = v)
   }
@@ -141,6 +141,23 @@ test_that("uploading a screenshot sends it to R and the dashboard shows R's valu
   js("var s=document.getElementById('series-view'); s.value='series'; s.dispatchEvent(new Event('change')); true")
 })
 
+test_that("a chart enlarged to full screen shrinks back to its panel afterwards", {
+  height <- function() js("Math.round(document.getElementById('chart-dist').getBoundingClientRect().height)")
+  before <- height()
+  js("document.querySelector('[data-expand=panel-dist]').scrollIntoView({ block: 'center' }); true")
+  click_el("[data-expand=panel-dist]")                  # a real click: full screen needs a user gesture
+  if (isTRUE(wait_until("document.fullscreenElement && document.fullscreenElement.id === 'panel-dist'", 5))) {
+    expect_true(wait_until(sprintf("document.getElementById('chart-dist').getBoundingClientRect().height > %d", before + 50), 5))
+    js("document.exitFullscreen(); true")
+    expect_true(wait_until(sprintf("Math.abs(document.getElementById('chart-dist').getBoundingClientRect().height - %d) <= 1", before), 5))
+    # The chart stays inside its panel.
+    expect_true(js("document.getElementById('chart-dist').getBoundingClientRect().bottom <= document.getElementById('panel-dist').getBoundingClientRect().bottom"))
+  } else {
+    skip("this headless browser does not allow full screen")
+  }
+  js("window.scrollTo(0, 0); true")
+})
+
 test_that("Chart Upload is a fixed part of the dashboard, aligned on shared lines", {
   js("window.scrollTo(0, 0); true"); Sys.sleep(0.3)
   expect_equal(js("document.querySelectorAll('#app-nav use[href$=i-settings]').length"), 0)
@@ -159,10 +176,10 @@ test_that("Chart Upload is a fixed part of the dashboard, aligned on shared line
 })
 
 test_that("each rail icon opens its own section; Monte Carlo is gone", {
-  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 6)
+  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 7)
   expect_null(js("document.getElementById('view-monte-carlo')"))
   icons <- c("#/descriptive" = "view-descriptive", "#/hypothesis" = "view-hypothesis", "#/regression" = "view-regression",
-             "#/data" = "view-data", "#/about" = "view-about", "#/dashboard" = "view-dashboard")
+             "#/data" = "view-data", "#/report" = "view-report", "#/about" = "view-about", "#/dashboard" = "view-dashboard")
   for (href in names(icons)) {
     click_el(sprintf('.rail-btn[href="%s"]', href))
     expect_equal(js("location.hash"), href)
@@ -190,6 +207,27 @@ test_that("every analysis page renders the uploaded chart's results without Java
   expect_true(js("!!FX.charts.get('desc-hist-chart') && !!FX.charts.get('desc-band-chart')"))
   expect_false(grepl("Percentiles|Tail check|Q-Q", js("document.getElementById('desc-results').textContent")))
   expect_false(js("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"))
+  expect_length(js_errors, 0)
+})
+
+test_that("the Report page shows the whole report and can be downloaded", {
+  open_view("#/report")
+  expect_true(wait_until("!!document.querySelector('#report-results .report h1')", 20))
+  txt <- js("document.getElementById('report-results').textContent")
+  for (h in c("1. Summary", "2. The chart and how it was read", "3. Descriptive statistics", "4. Probability and distributions",
+              "5. Testing of hypotheses", "6. Our hypothesis", "7. Correlation and regression", "8. Limitations")) expect_match(txt, h, fixed = TRUE)
+  a <- jsonlite::fromJSON(js("JSON.stringify(FX.chart.current().hypothesis.tests.map(function(t){return t.title}))"))
+  expect_equal(js("document.querySelectorAll('#report-results .rp-test').length"), length(a))   # every test is in the report
+  expect_equal(js("document.querySelectorAll('#report-results canvas').length"), 4)
+  expect_false(js("document.getElementById('report-download').disabled"))
+  # The downloadable file is a complete document with charts and the screenshot embedded.
+  html <- js("window.__rep = null; FX.reportHtml().then(function(h){ window.__rep = h; return true; })")
+  expect_true(wait_until("typeof window.__rep === 'string'", 20))
+  doc <- js("window.__rep")
+  expect_match(doc, "<!DOCTYPE html>", fixed = TRUE)
+  expect_match(doc, "6. Our hypothesis", fixed = TRUE)
+  expect_gte(lengths(regmatches(doc, gregexpr("src=\"data:image/png;base64,", doc))), 5)       # 4 charts + the screenshot
+  expect_false(grepl("<canvas", doc, fixed = TRUE))
   expect_length(js_errors, 0)
 })
 

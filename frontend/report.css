@@ -1,0 +1,46 @@
+/* report.css - styles of the Report page AND of the downloaded report file (the file embeds this
+   stylesheet, so everything the report needs is defined here and uses its own rp-* classes). */
+.report {
+  --rp-bg: #101a32; --rp-panel: #16223f; --rp-line: rgba(255, 255, 255, 0.14); --rp-text: #f1f5fc; --rp-muted: #aab6d0;
+  --rp-accent: #5b9bff; --rp-good: #4ade80; --rp-bad: #ff7a85;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.55;
+  color: var(--rp-text); background: var(--rp-bg); border: 1px solid var(--rp-line); border-radius: 14px;
+  padding: clamp(16px, 3vw, 40px); width: 100%; box-sizing: border-box;
+}
+.report * { box-sizing: border-box; }
+.rp-cover { padding-bottom: 18px; margin-bottom: 22px; border-bottom: 2px solid var(--rp-accent); }
+.rp-kicker { margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--rp-accent); }
+.report h1 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 32px); line-height: 1.2; }
+.report h2 { margin: 30px 0 10px; padding-bottom: 6px; font-size: 19px; border-bottom: 1px solid var(--rp-line); }
+.report h3 { margin: 18px 0 6px; font-size: 15px; }
+.report p { margin: 0 0 10px; }
+.rp-muted { color: var(--rp-muted); font-size: 12.5px; }
+.rp-formula { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--rp-line);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px; white-space: pre-wrap; }
+.rp-verdict { margin: 14px 0; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--rp-line); border-left: 6px solid var(--rp-accent); background: var(--rp-panel); }
+.rp-verdict strong { display: block; font-size: 17px; }
+.rp-verdict.is-up { border-left-color: var(--rp-good); } .rp-verdict.is-down { border-left-color: var(--rp-bad); }
+.rp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+.rp-stat { padding: 10px 12px; border-radius: 10px; background: var(--rp-panel); border: 1px solid var(--rp-line); }
+.rp-stat span { display: block; font-size: 11.5px; color: var(--rp-muted); }
+.rp-stat b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.report table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; font-size: 13px; }
+.report caption { text-align: left; font-weight: 650; padding: 4px 0 6px; }
+.report th, .report td { padding: 5px 9px; text-align: left; vertical-align: top; border-top: 1px solid var(--rp-line); }
+.report th { background: rgba(255, 255, 255, 0.07); font-weight: 600; }
+.report td.num, .report th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.report .reject { color: var(--rp-bad); font-weight: 600; } .report .keep { color: var(--rp-good); font-weight: 600; }
+.rp-chart { position: relative; height: 270px; margin: 8px 0 14px; padding: 8px; border-radius: 10px; background: var(--rp-panel); border: 1px solid var(--rp-line); }
+.rp-chart canvas { position: absolute; left: 8px; top: 8px; }
+.rp-img, .rp-shot { display: block; width: 100%; height: auto; margin: 8px 0 14px; border-radius: 10px; border: 1px solid var(--rp-line); }
+.rp-shot { background: #0b1224; }
+.report ul, .report ol { margin: 0 0 12px; padding-left: 22px; }
+.rp-foot { margin-top: 30px; padding-top: 12px; border-top: 1px solid var(--rp-line); }
+.rp-test { page-break-inside: avoid; margin-bottom: 6px; }
+
+@media print {
+  .report { --rp-bg: #fff; --rp-panel: #f3f6fb; --rp-line: #c9d2e3; --rp-text: #111827; --rp-muted: #4b5563; --rp-accent: #1d4ed8;
+    --rp-good: #15803d; --rp-bad: #b91c1c; border: 0; max-width: none; padding: 0; }
+  .rp-img, .rp-shot { break-inside: avoid; }
+  .report h2 { break-after: avoid; }
+}

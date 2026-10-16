@@ -268,35 +268,59 @@ find_time_axis <- function(img, canvas, x_max) {
   list(top = min(lab$y1), labels = lab$word, x = (lab$x1 + lab$x2) / 2)
 }
 
+# Title and interval from the OCR words of the legend line. TradingView writes
+# "Name · Interval · Exchange" ("NIFTY 50 · 1D · NSE", "Reliance Industries Limited · 1 · NSE"),
+# followed by icons and the O/H/L/C values. OCR may drop the dots, turn them into "-" or ".",
+# or glue them to the words. A bare number as interval is minutes (1, 5, 15; 60 = 1h, 240 = 4h).
+legend_title <- function(words) {
+  words <- words[nzchar(trimws(words))]
+  if (!length(words)) return(list(title = "", interval = NULL, n_words = 0L))
+  # The title ends where icons, the O/H/L/C letters or their values start ("... NSE 8) H L C").
+  stop_at <- which(seq_along(words) > 1 &
+                   (grepl("^[OHLC]$|^[OHLC][0-9]", words) | grepl("[^[:alnum:]/&.,'_:!\u00b7\u2022-]", words)))
+  n_words <- if (length(stop_at)) stop_at[1] - 1L else length(words)
+  words <- words[seq_len(n_words)]
+  iv_pattern <- "^([0-9]{1,3}[smhHDWMR]?|[DWM])$"
+  as_interval <- function(x) {
+    if (!grepl("^[0-9]+$", x)) return(x)
+    n <- as.integer(x)
+    if (n %% 60 == 0) paste0(n / 60, "h") else paste0(n, "m")
+  }
+  text <- paste(words, collapse = " ")
+  parts <- trimws(unlist(strsplit(text, "\\s*[\u00b7\u2022]\\s*|\\s+[-.]\\s+|(?<=[[:alnum:]])-(?=[[:alnum:]])", perl = TRUE)))
+  parts <- parts[nzchar(parts)]
+  k <- which(seq_along(parts) > 1 & grepl(iv_pattern, parts))
+  if (length(k)) {
+    k <- k[1]
+    exchange <- if (k < length(parts)) strsplit(parts[k + 1], "\\s+")[[1]][1] else NULL
+    title <- paste(c(paste(parts[seq_len(k - 1)], collapse = " "), parts[k], exchange), collapse = " \u00b7 ")
+    return(list(title = gsub("\\s+", " ", title), interval = as_interval(parts[k]), n_words = n_words))
+  }
+  # No separators were read: an interval-like word right before a final exchange code (NSE, BINANCE, FX_IDC).
+  w <- length(words)
+  if (w >= 3 && grepl(iv_pattern, words[w - 1]) && grepl("^[A-Z][A-Za-z0-9_]{1,}$", words[w])) {
+    title <- paste(c(paste(words[seq_len(w - 2)], collapse = " "), words[w - 1], words[w]), collapse = " \u00b7 ")
+    return(list(title = title, interval = as_interval(words[w - 1]), n_words = n_words))
+  }
+  list(title = gsub("\\s+", " ", text), interval = NULL, n_words = n_words)
+}
+
 # Legend line at the top-left (TradingView: "Bitcoin / TetherUS · 1D · Binance  O… H… L… C…").
 # The title is read with coloured text removed (the OHLC values are coloured); the legend
 # area that is excluded from the price series extends over the coloured values after it.
 find_legend <- function(img, bg, canvas, x_max) {
   rows <- seq_len(max(40, floor(img$h * 0.09)))
   words <- ocr_region(canvas, rows, seq_len(x_max), psm = "11")
-  words <- words[words$confidence > 50 & (grepl("[[:alnum:]]", words$word) | words$word == "/"), , drop = FALSE]
+  words <- words[words$confidence > 50 & (grepl("[[:alnum:]]", words$word) | words$word %in% c("/", "-", "·", "•")), , drop = FALSE]
   if (nrow(words) == 0) return(NULL)
   yc <- (words$y1 + words$y2) / 2
   line <- words[abs(yc - min(yc)) <= 8, , drop = FALSE]
   line <- line[order(line$x1), , drop = FALSE]
   gap <- c(0, line$x1[-1] - line$x2[-nrow(line)])
   line <- line[cumsum(gap > 60) == 0, , drop = FALSE]        # the title is one compact group of words
-  # The grey letters O, H, L, C in front of the coloured OHLC values are not part of the title.
-  while (nrow(line) > 1 && grepl("^[OHLC]$", line$word[nrow(line)])) line <- line[-nrow(line), , drop = FALSE]
-
-  # "NIFTY 50-1D-NSE" / "Bitcoin / TetherUS - 1D - Binance": split at the separators to find the interval.
-  pieces <- unlist(strsplit(line$word, "[·•-]"))
-  pieces <- pieces[nzchar(pieces)]
-  is_iv <- grepl("^([0-9]{1,3}[smhHDWM]|[DWM])$", pieces)
-  interval <- if (any(is_iv)) pieces[which(is_iv)[1]] else NULL
-  title <- paste(line$word, collapse = " ")
-  if (!is.null(interval)) {
-    k <- which(is_iv)[1]
-    before <- paste(pieces[seq_len(k - 1)], collapse = " ")
-    after <- if (k < length(pieces)) paste(pieces[(k + 1):length(pieces)], collapse = " ") else ""
-    title <- paste(c(trimws(before), interval, if (nzchar(trimws(after))) trimws(after)), collapse = " · ")
-  }
-  title <- gsub("\\s+", " ", trimws(title))
+  parsed <- legend_title(line$word)
+  line <- line[seq_len(parsed$n_words), , drop = FALSE]
+  title <- parsed$title; interval <- parsed$interval
 
   box <- c(x1 = min(line$x1), y1 = min(line$y1), x2 = max(line$x2), y2 = max(line$y2))
   br <- max(1, floor(box[["y1"]]) - 2):min(img$h, ceiling(box[["y2"]]) + 2)

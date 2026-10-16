@@ -5,7 +5,7 @@
    ============================================================================= */
 (function () {
   var ui = FX.ui;
-  var VIEWS = ['dashboard', 'descriptive', 'distributions', 'hypothesis', 'regression', 'data', 'about'];
+  var VIEWS = ['dashboard', 'descriptive', 'distributions', 'hypothesis', 'regression', 'data', 'report', 'about'];
   var initialised = {};
   var current = null;
 

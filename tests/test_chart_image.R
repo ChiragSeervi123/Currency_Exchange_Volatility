@@ -168,3 +168,16 @@ test_that("our hypothesis follows the significant drift, or the mean line when t
 test_that("the analysis needs enough points with some variation", {
   expect_fx_error(analyse_chart_series(synthetic(rep(100, 50))), "DEGENERATE_DATA")
 })
+
+test_that("legend titles stop before icons and OHLC values, and intervals are read", {
+  r <- legend_title(c("Reliance", "Industries", "Limited", "1", "NSE", "8)", "H", "L", "Cc"))
+  expect_equal(r$title, "Reliance Industries Limited · 1 · NSE")
+  expect_equal(r$interval, "1m")
+  expect_equal(r$n_words, 5)
+  r <- legend_title(c("Reliance", "Industries", "Limited", "·", "1", "·", "NSE", "O1,211.5"))
+  expect_equal(r$title, "Reliance Industries Limited · 1 · NSE")
+  expect_equal(legend_title(c("NIFTY", "50-1D-NSE"))$title, "NIFTY 50 · 1D · NSE")
+  expect_equal(legend_title(c("NIFTY", "50", "1D", "NSE"))$interval, "1D")
+  expect_equal(legend_title(c("BTCUSD", "·", "240", "·", "BINANCE"))$interval, "4h")
+  expect_null(legend_title(c("My", "chart"))$interval)
+})
