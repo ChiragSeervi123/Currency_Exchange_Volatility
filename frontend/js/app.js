@@ -1,11 +1,11 @@
 /* =============================================================================
-   app.js - navigation (hash routes such as #/monte-carlo), the floating rail's
-   active state, the R backend status button, the currency-pair popover, the
-   clock, and the shared /defaults request.
+   app.js - navigation (hash routes such as #/hypothesis), the floating rail's
+   active state, the R backend status button, the chart popover, the clock,
+   and the shared /defaults request.
    ============================================================================= */
 (function () {
   var ui = FX.ui;
-  var VIEWS = ['dashboard', 'descriptive', 'distributions', 'monte-carlo', 'hypothesis', 'regression', 'historical', 'about'];
+  var VIEWS = ['dashboard', 'descriptive', 'distributions', 'hypothesis', 'regression', 'data', 'about'];
   var initialised = {};
   var current = null;
 
@@ -20,7 +20,7 @@
     return defaultsPromise;
   };
 
-  // ---- Popovers (currency pair, backend status) ------------------------------------------
+  // ---- Popovers (uploaded chart, backend status) ----------------------------------------
   function bindPopover(buttonId, popId) {
     var btn = document.getElementById(buttonId), pop = document.getElementById(popId);
     btn.addEventListener('click', function () {
@@ -70,11 +70,9 @@
 
   function checkHealth() {
     return FX.api.health().then(function (h) {
-      var data = h.datasets.usdinr;
       setStatus(true, 'R backend connected',
-        h.r_version.replace(/ \(.*\)/, '') + ' · plumber ' + h.plumber_version + ' · ' +
-        (data.available ? 'USD/INR data to ' + data.last_date + (data.kind === 'uploaded' ? ' (uploaded file)' : ' (FRED)')
-                        : 'no USD/INR data loaded') + '. All statistics are computed in R.');
+        h.r_version.replace(/ \(.*\)/, '') + ' · plumber ' + h.plumber_version + ' · ' + h.ocr_engine + ' · ' +
+        (h.chart_loaded ? 'a chart is loaded' : 'no chart uploaded yet') + '. All statistics are computed in R.');
     }).catch(function () {
       setStatus(false, 'R backend offline', FX.api.offlineMessage());
     });

@@ -13,7 +13,7 @@ window.FX = window.FX || {};
 
   FX.config = {
     apiBase: window.FXLAB_API_BASE || (servedByBackend ? location.origin : DEFAULT_API_BASE),
-    requestTimeoutMs: 60000,      // a large Monte Carlo run can take a few seconds
+    requestTimeoutMs: 90000,      // reading a large screenshot (OCR) can take several seconds
     healthIntervalMs: 30000,      // how often the connection indicator re-checks the backend
     openedFromFile: location.protocol === 'file:',
     startCommand: '"C:\\Program Files\\R\\R-4.6.1\\bin\\Rscript.exe" backend/main.R'
@@ -24,7 +24,6 @@ window.FX = window.FX || {};
     list: {},
     register: function (name, section) { FX.sections.list[name] = section; }
   };
-  // Increases whenever the active dataset changes (upload / reset), so data-driven
-  // sections know to reload their results.
+  // Increases whenever the analysed chart changes (upload / clear), so sections re-render.
   FX.dataVersion = 0;
 })();

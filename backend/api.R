@@ -25,7 +25,7 @@ plumber::register_parser("fxraw", function(...) function(value, ...) value,
                          fixed = c("application/json", "text/json"), verbose = FALSE)
 
 #* @apiTitle FXLab API
-#* @apiDescription Statistical analysis of the USD/INR exchange rate. All computations run in R.
+#* @apiDescription Statistical analysis of a price chart screenshot (and of the bundled USD/INR data). All computations run in R.
 #* @apiVersion 1.0.0
 
 # ---- Response helpers -------------------------------------------------------------------------
@@ -149,7 +149,9 @@ function(res) {
     server_time = format(Sys.time(), "%Y-%m-%d %H:%M:%S %Z"),
     statistical_engine = "R",
     datasets = list(usdinr = dataset_status("usdinr"), dollar_index = dataset_status("dollar_index")),
-    uploaded_dataset_active = !is.null(.fx_state$uploaded)
+    uploaded_dataset_active = !is.null(.fx_state$uploaded),
+    chart_loaded = !is.null(.fx_state$chart),
+    ocr_engine = tryCatch(paste("tesseract", tesseract::tesseract_info()$version), error = function(e) "unavailable")
   ), "FXLab API is running")
 }
 
@@ -157,11 +159,8 @@ function(res) {
 #* @get /defaults
 function(res) {
   api_run(res, list(
-    simulation = simulation_defaults(),
-    simulation_models = FXLAB_CONFIG$simulation_models,
-    limits = FXLAB_CONFIG$limits[c("sim_max_days", "sim_max_paths", "sim_max_cells", "sim_max_display_paths", "sim_max_display_points",
-                                   "sim_min_t_df", "sim_max_t_df", "max_daily_sigma_pct", "max_abs_daily_mu_pct",
-                                   "custom_max_values", "dist_max_sample", "upload_max_bytes")],
+    chart_intervals = FXLAB_CONFIG$chart_intervals,
+    limits = FXLAB_CONFIG$limits[c("chart_max_bytes", "custom_max_values", "dist_max_sample", "upload_max_bytes")],
     distributions = distribution_catalogue(),
     hypothesis_tests = TEST_TYPES,
     regression_models = c("returns_vs_dollar_index", "time_trend", "custom"),
@@ -173,15 +172,40 @@ function(res) {
   ))
 }
 
-#* Simulate USD/INR paths (GBM) and summarise them by Monte Carlo
-#* @post /simulate
+#* Analyse a chart screenshot. JSON body: {"image_base64": "...", "file_name": "...", "chart_name": "...",
+#* "interval": "1D", "manual_high": 70000, "manual_low": 45000} (only image_base64 is required)
+#* @post /chart/analyze
 #* @parser fxraw
 #* @parser octet
 function(req, res) {
-  api_run(res, {
-    inp <- validate_simulation_input(parse_json_body(req))
-    do.call(simulate_exchange_rate, inp)
-  }, "Simulation completed")
+  api_run(res, chart_analyze_request(parse_json_body(req)), "Chart analysed")
+}
+
+#* The analysis of the last uploaded chart (data is null when no chart has been analysed yet)
+#* @get /chart/current
+function(res) {
+  api_run(res, .fx_state$chart, if (is.null(.fx_state$chart)) "No chart has been uploaded yet" else "OK")
+}
+
+#* The last uploaded chart image itself
+#* @get /chart/image
+function(res) {
+  img <- .fx_state$chart_image
+  if (is.null(img)) return(api_failure(res, 404L, "NOT_FOUND", "No chart has been uploaded yet."))
+  res$status <- 200L
+  res$setHeader("Content-Type", img$type)
+  res$setHeader("Cache-Control", "no-store")
+  res$body <- img$raw
+  res
+}
+
+#* Forget the uploaded chart
+#* @post /chart/reset
+#* @parser fxraw
+#* @parser octet
+function(req, res) {
+  api_run(res, { had <- !is.null(.fx_state$chart); .fx_state$chart <- NULL; .fx_state$chart_image <- NULL; list(reset = had) },
+          "Chart removed")
 }
 
 #* Probability distribution: PDF/PMF, CDF, quantiles, probabilities and a random sample

@@ -2,14 +2,15 @@
 # install_packages.R - install the R packages FXLab uses (run once).
 #   "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" scripts/install_packages.R
 #
-# Required to run the app : plumber (brings jsonlite, httpuv, ...)
+# Required to run the app : plumber (brings jsonlite, httpuv, ...), png and jpeg (read screenshots),
+#                           tesseract (reads the price-axis labels; includes the English OCR data)
 # Required for the tests  : testthat, curl, processx, withr
 # Optional                : moments  (extra cross-checks in the tests)
 #                           chromote (headless-browser test; needs Google Chrome)
 # =============================================================================
 
 repos <- "https://cloud.r-project.org"
-required <- c("plumber", "jsonlite")
+required <- c("plumber", "jsonlite", "png", "jpeg", "tesseract")
 testing  <- c("testthat", "curl", "processx", "withr")
 optional <- c("moments", "chromote")
 

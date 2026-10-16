@@ -1,5 +1,5 @@
 # =============================================================================
-# run_tests.R - run every automated test (statistics, simulation, data
+# run_tests.R - run every automated test (statistics, chart reading, data
 # validation, hypothesis tests, regression, API, and the browser test).
 #
 # From the project folder:

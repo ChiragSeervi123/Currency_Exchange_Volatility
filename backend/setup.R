@@ -8,7 +8,7 @@
 #
 #               source("backend/setup.R")
 #               historical_summary()$volatility
-#               simulate_exchange_rate(85, 0.01, 0.3, days = 252, n_paths = 1000, seed = 1)$terminal
+#               chart_analyze_file("tests/fixtures/btc_dark_candles.png")$hypothesis$outlook
 # =============================================================================
 
 # Project root = the folder that contains FXLab.Rproj (search upwards from the
@@ -40,7 +40,7 @@ FXLAB_ROOT <- find_fxlab_root()
 
 local({
   modules <- c("config.R", "validation.R", "statistics.R", "historical_analysis.R", "distributions.R",
-               "simulation.R", "hypothesis_testing.R", "regression_analysis.R")
+               "hypothesis_testing.R", "regression_analysis.R", "chart_image.R", "chart_analysis.R")
   for (m in modules) source(file.path(FXLAB_ROOT, "backend", m), local = globalenv())
 })
 

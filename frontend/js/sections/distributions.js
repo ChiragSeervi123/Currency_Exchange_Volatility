@@ -1,172 +1,143 @@
-/* distributions.js - Probability Distribution Analysis via POST /distribution. */
+/* distributions.js - Probability for the uploaded chart (computed by R; this file only draws it):
+   basic and conditional probability, Bayes' theorem, the joint distribution of consecutive candles,
+   and the binomial, Poisson and normal models. */
 (function () {
   var ui, fmt;
-  var state = { busy: false, ran: false };
-  var catalogue = [];
+  var state = { version: -1 };
 
-  // Starting values for the probability inputs a and b (form presets, not results).
-  var QUERY_PRESETS = {
-    normal: { a: -1.96, b: 1.96 }, uniform: { a: 0.25, b: 0.75 }, exponential: { a: 1, b: 2 },
-    binomial: { a: 8, b: 12 }, poisson: { a: 5, b: 7 }
-  };
+  function pct(x) { return fmt.prob(x, 1); }
 
-  function buildParams(form, distId) {
-    var spec = catalogue.filter(function (d) { return d.id === distId; })[0];
-    var holder = document.getElementById('dist-params');
-    holder.replaceChildren();
-    if (!spec) return;
-    spec.params.forEach(function (p) {
-      var id = 'dist-param-' + p.name;
-      var range = [p.min != null ? 'min ' + p.min : null, p.max != null ? 'max ' + p.max : null].filter(Boolean).join(', ');
-      var input = ui.el('input', { id: id, name: 'params.' + p.name, type: 'number', step: p.integer ? '1' : 'any',
-        min: p.min, max: p.max, value: p.default, required: true });
-      holder.appendChild(ui.el('div', { class: 'field' }, [
-        ui.el('label', { for: id }, [p.label + ' ', range ? ui.el('span', { class: 'unit', text: range }) : null]),
-        input
-      ]));
+  function formula(text) { return ui.el('p', { class: 'formula', text: text }); }
+
+  function jointTable(j) {
+    var names = ['Up', 'Down'];
+    var head = ui.el('tr', {}, [ui.el('th', { scope: 'col', text: 'Previous candle ↓ / Current candle →' })]
+      .concat(names.map(function (n) { return ui.el('th', { class: 'num', scope: 'col', text: n }); }))
+      .concat([ui.el('th', { class: 'num', scope: 'col', text: 'Marginal P(previous)' })]));
+    var rows = names.map(function (n, i) {
+      return ui.el('tr', {}, [ui.el('th', { scope: 'row', text: n })]
+        .concat(names.map(function (m, k) {
+          return ui.el('td', { class: 'num', text: fmt.num(j.probabilities[i][k], 4) + ' (' + j.counts[i][k] + ')' });
+        }))
+        .concat([ui.el('td', { class: 'num', text: fmt.num(j.marginal_previous[i], 4) })]));
     });
-    var preset = QUERY_PRESETS[distId] || { a: 1, b: 2 };
-    form.querySelector('[name="query.a"]').value = preset.a;
-    form.querySelector('[name="query.b"]').value = preset.b;
+    rows.push(ui.el('tr', {}, [ui.el('th', { scope: 'row', text: 'Marginal P(current)' })]
+      .concat(j.marginal_current.map(function (x) { return ui.el('td', { class: 'num', text: fmt.num(x, 4) }); }))
+      .concat([ui.el('td', { class: 'num', text: '1.0000' })])));
+    return ui.el('div', { class: 'table-wrap' }, [ui.el('table', {}, [
+      ui.el('caption', { text: 'Joint probability distribution of (previous candle, current candle) — ' + j.n_pairs + ' pairs (counts in brackets)' }),
+      ui.el('thead', {}, [head]), ui.el('tbody', {}, rows)])]);
   }
 
-  function toggleB(form) {
-    document.getElementById('dist-b-field').hidden = form.querySelector('[name="query_type"]').value !== 'between';
+  function compareBars(id, labels, observed, theory, xTitle, theoryLabel) {
+    var c = FX.charts.colors();
+    var sets = [];
+    if (observed) sets.push({ label: 'Observed on the chart', data: observed.map(function (x) { return 100 * x; }), backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 0.75 });
+    sets.push({ label: theoryLabel, data: theory.map(function (x) { return 100 * x; }), backgroundColor: c.s2, barPercentage: 0.9, categoryPercentage: 0.75 });
+    FX.charts.render(id, {
+      type: 'bar', data: { labels: labels, datasets: sets },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { tooltip: { callbacks: { label: function (item) { return item.dataset.label + ': ' + fmt.num(item.parsed.y, 2) + '%'; } } } },
+        scales: { x: FX.charts.axis(xTitle, { type: 'category' }), y: FX.charts.axis('Probability (%)', { extra: { beginAtZero: true } }) }
+      }
+    });
   }
 
-  function inRegion(x, q) {
-    if (!q) return false;
-    if (q.type === 'less_equal') return x <= q.a;
-    if (q.type === 'greater') return x > q.a;
-    return x >= q.a && x <= q.b;
-  }
+  function render(a, root) {
+    var p = a.probability, c = p.conditional, b = p.bayes, ind = p.independence;
+    root.appendChild(ui.el('p', { class: 'meta', text: a.chart.name + ' · ' + fmt.int(p.n) + ' moves between consecutive candles: ' +
+      p.n_up + ' up, ' + p.n_down + ' down' + (p.n_flat ? ', ' + p.n_flat + ' flat' : '') }));
 
-  function render(d, root) {
-    var t = d.theoretical, c = FX.charts.colors(), q = d.probability;
-    var params = Object.keys(d.parameters).map(function (k) { return k + ' = ' + d.parameters[k]; }).join(', ');
-    root.appendChild(ui.el('p', { class: 'meta', text: d.label + ' distribution (' + params + '). ' + d.formula }));
-    root.appendChild(ui.cards([
-      q ? { label: q.expression, value: fmt.sig(q.probability, 6), sub: fmt.prob(q.probability, 4) +
-            (q.point_probability != null ? ' · P(X = ' + q.a + ') = ' + fmt.sig(q.point_probability, 5) : '') } : null,
-      d.quantile_query ? { label: 'Quantile x for p = ' + d.quantile_query.p, value: fmt.sig(d.quantile_query.value, 6), sub: d.quantile_query.expression } : null,
-      { label: 'Mean E[X]', value: fmt.sig(t.mean, 6) },
-      { label: 'Variance Var(X)', value: fmt.sig(t.variance, 6), sub: 'SD ' + fmt.sig(t.sd, 6) },
-      { label: 'Median', value: fmt.sig(t.median, 6), sub: t.mode != null ? 'mode ' + fmt.sig(t.mode, 6) : 'mode: every value in [a, b]' },
-      { label: 'Skewness', value: fmt.sig(t.skewness, 4), sub: 'excess kurtosis ' + fmt.sig(t.excess_kurtosis, 4) }
+    // Unit 1: basic probability
+    root.appendChild(ui.section('1. Probability, conditional probability and Bayes\' theorem', [
+      formula('P(A) = favourable cases / total cases      P(A | B) = P(A ∩ B) / P(B)      P(B | A) = P(A | B) · P(B) / P(A)'),
+      ui.cards([
+        { label: 'P(Up) = p', value: pct(p.p_up), sub: p.n_up + ' of ' + (p.n_up + p.n_down) + ' moves' },
+        { label: 'P(Down) = q = 1 − p', value: pct(p.p_down), sub: p.n_down + ' of ' + (p.n_up + p.n_down) + ' moves' },
+        { label: 'P(Up | previous Up)', value: pct(c.p_up_given_up), sub: 'conditional probability' },
+        { label: 'P(Up | previous Down)', value: pct(c.p_up_given_down), sub: 'conditional probability' },
+        { label: 'Bayes: P(previous Up | Up)', value: pct(b.result),
+          sub: fmt.num(b.p_up_given_up, 3) + ' × ' + fmt.num(b.p_prev_up, 3) + ' / ' + fmt.num(b.p_up_now, 3) },
+        { label: 'P(move > 1 SD)', value: pct(p.big_moves.p_big),
+          sub: p.big_moves.p_big_after_big != null ? 'after a big move: ' + pct(p.big_moves.p_big_after_big) : '' }
+      ]),
+      ui.el('p', { class: 'interpretation', text: 'Independence check: P(Up before ∩ Up now) = ' + fmt.num(ind.p_joint_up_up, 4) +
+        ' and P(Up before) × P(Up now) = ' + fmt.num(ind.product, 4) + '. ' +
+        (Math.abs(ind.difference) < 0.02 ? 'They are almost equal, so consecutive candles behave close to independent events.'
+          : 'They differ by ' + fmt.num(Math.abs(ind.difference), 4) + ', so consecutive candles are not exactly independent (the chi-square test on the Hypothesis page checks whether this is significant).') }),
+      p.flat_note ? ui.el('p', { class: 'chart-note', text: p.flat_note }) : null
     ]));
 
-    var cur = d.curve;
-    var grid = ui.el('div', { class: 'grid-2' });
-    root.appendChild(grid);
-    grid.appendChild(ui.chartCard({ id: 'dist-pdf-chart', title: d.discrete ? 'Probability mass function P(X = k)' : 'Probability density function f(x)',
-      note: (q ? 'Shaded: the region of ' + q.expression + '. ' : '') + (cur.thinned ? 'Support thinned for display.' : '') }));
-    if (d.discrete) {
-      FX.charts.render('dist-pdf-chart', {
-        type: 'bar',
-        data: { datasets: [{ label: 'P(X = k)', data: FX.charts.xy(cur.x, cur.density),
-          backgroundColor: cur.x.map(function (x) { return inRegion(x, q) ? c.s2 : c.s1; }),
-          barPercentage: 0.9, categoryPercentage: 1 }] },
-        options: { plugins: { legend: { display: false } },
-          scales: { x: FX.charts.axis('k', { extra: { offset: true } }), y: FX.charts.axis('Probability', { extra: { beginAtZero: true } }) } }
-      });
-    } else {
-      var shaded = cur.x.map(function (x, i) { return inRegion(x, q) ? cur.density[i] : null; });
-      FX.charts.render('dist-pdf-chart', {
-        type: 'line',
-        data: { datasets: [
-          { label: 'Region of ' + (q ? q.expression : ''), data: cur.x.map(function (x, i) { return { x: x, y: shaded[i] }; }),
-            borderWidth: 0, backgroundColor: FX.charts.alpha(c.s2, 0.35), fill: 'origin', spanGaps: false, excludeFromTable: true, legendHidden: !q },
-          { label: 'f(x)', data: FX.charts.xy(cur.x, cur.density), borderColor: c.s1 }
-        ] },
-        options: { plugins: { legend: { labels: { filter: FX.charts.legendFilter } } },
-          scales: { x: FX.charts.axis('x'), y: FX.charts.axis('Density', { extra: { beginAtZero: true } }) } }
-      });
-    }
-    grid.appendChild(ui.chartCard({ id: 'dist-cdf-chart', title: 'Cumulative distribution function F(x) = P(X ≤ x)' }));
-    FX.charts.render('dist-cdf-chart', {
-      type: 'line',
-      data: { datasets: [{ label: 'F(x)', data: FX.charts.xy(cur.x, cur.cdf), borderColor: c.s1, stepped: d.discrete ? 'after' : false }] },
-      options: { plugins: { legend: { display: false } },
-        scales: { x: FX.charts.axis(d.discrete ? 'k' : 'x'), y: FX.charts.axis('Cumulative probability', { extra: { min: 0, max: 1 } }) } }
-    });
+    // Unit 3: bivariate distribution
+    var j = p.joint;
+    root.appendChild(ui.section('2. Bivariate (joint) distribution of consecutive candles', [
+      formula('Joint P(X = x, Y = y)      Marginal P(X = x) = Σᵧ P(x, y)      Conditional P(Y = y | X = x) = P(x, y) / P(X = x)'),
+      jointTable(j),
+      ui.el('p', { class: 'interpretation', text: 'Conditional distribution of the current candle: after an up candle, P(Up) = ' + pct(c.p_up_given_up) +
+        ' and P(Down) = ' + pct(c.p_down_given_up) + '; after a down candle, P(Up) = ' + pct(c.p_up_given_down) + ' and P(Down) = ' + pct(c.p_down_given_down) + '.' })
+    ]));
 
-    root.appendChild(ui.table({ caption: 'Quantiles: smallest x with P(X ≤ x) ≥ p',
-      columns: [{ key: 'probability', label: 'p', num: true, format: function (x) { return fmt.num(x, 2); } },
-                { key: 'value', label: 'Quantile', num: true, format: function (x) { return fmt.sig(x, 6); } }],
-      rows: d.quantiles }));
+    // Unit 2: binomial
+    var bi = p.binomial;
+    var binGrid = ui.el('div', { class: 'grid-2' });
+    root.appendChild(ui.section('3. Binomial distribution: up candles among the next ' + bi.m, [
+      formula('X ~ B(n = ' + bi.m + ', p = ' + fmt.num(bi.p, 4) + ')      P(X = k) = C(n, k) pᵏ qⁿ⁻ᵏ      E[X] = np      Var(X) = npq'),
+      ui.cards([
+        { label: 'Mean np', value: fmt.num(bi.mean, 3), sub: 'expected up candles' },
+        { label: 'Variance npq', value: fmt.num(bi.variance, 3), sub: 'SD ' + fmt.num(bi.sd, 3) },
+        { label: 'Skewness (q − p) / √npq', value: fmt.num(bi.skewness, 4) },
+        { label: 'Kurtosis 3 + (1 − 6pq) / npq', value: fmt.num(bi.kurtosis, 4) },
+        { label: 'P(X ≥ 6)', value: pct(bi.p_at_least_6), sub: 'a majority of up candles' },
+        { label: 'Most likely k', value: String(bi.mode_k) }
+      ]),
+      binGrid
+    ]));
+    binGrid.appendChild(ui.chartCard({ id: 'prob-binom-chart', title: 'Binomial probabilities P(X = k)',
+      note: bi.observed_share ? 'Observed: the share of the chart\'s ' + bi.n_blocks + ' consecutive blocks of ' + bi.m + ' candles with k up candles.' : 'Too few blocks of ' + bi.m + ' candles on the chart to show observed shares.' }));
+    compareBars('prob-binom-chart', bi.k.map(String), bi.observed_share, bi.pmf, 'k = number of up candles in ' + bi.m, 'Binomial model');
 
-    if (d.sample) {
-      var s = d.sample.summary;
-      root.appendChild(ui.section('Random sample drawn in R (n = ' + fmt.int(s.n) + ', seed ' + s.seed + ')', [
-        ui.table({ caption: 'Sample statistics vs theory',
-          columns: [{ key: 'm', label: 'Measure' }, { key: 's', label: 'Sample', num: true }, { key: 't', label: 'Theory', num: true }],
-          rows: [
-            { m: 'Mean', s: fmt.sig(s.mean, 6), t: fmt.sig(t.mean, 6) },
-            { m: 'Variance', s: fmt.sig(s.variance, 6), t: fmt.sig(t.variance, 6) },
-            { m: 'Standard deviation', s: fmt.sig(s.sd, 6), t: fmt.sig(t.sd, 6) },
-            { m: 'Skewness', s: fmt.sig(s.skewness, 4), t: fmt.sig(t.skewness, 4) },
-            { m: 'Standard error of the sample mean', s: fmt.sig(s.standard_error_of_mean, 4), t: '' }
-          ] })
+    // Unit 2: Poisson
+    var po = p.poisson;
+    if (po) {
+      var poisGrid = ui.el('div', { class: 'grid-2' });
+      root.appendChild(ui.section('4. Poisson distribution: rare extreme moves', [
+        formula('X ~ P(λ = ' + fmt.num(po.lambda, 4) + ')      P(X = k) = e^(−λ) λᵏ / k!      E[X] = Var(X) = λ      skewness = 1/√λ      kurtosis = 3 + 1/λ'),
+        ui.cards([
+          { label: 'λ (mean per block)', value: fmt.num(po.lambda, 4) },
+          { label: 'Sample variance of counts', value: fmt.num(po.sample_variance, 4), sub: 'Poisson: equal to λ' },
+          { label: 'P(no extreme move)', value: pct(po.p_zero), sub: 'P(X = 0)' },
+          { label: 'P(at least one)', value: pct(po.p_at_least_1) },
+          { label: 'Skewness 1/√λ', value: fmt.num(po.skewness, 4) },
+          { label: 'Kurtosis 3 + 1/λ', value: fmt.num(po.kurtosis, 4) }
+        ]),
+        poisGrid
       ]));
-      root.appendChild(ui.chartCard({ id: 'dist-sample-chart', title: 'Sample vs theoretical distribution',
-        note: 'As n grows, the sample histogram approaches the theoretical curve (Law of Large Numbers).' }));
-      if (d.sample.discrete_frequencies) {
-        var f = d.sample.discrete_frequencies;
-        FX.charts.render('dist-sample-chart', {
-          type: 'bar',
-          data: { datasets: [
-            { type: 'bar', label: 'Sample share', data: FX.charts.xy(f.map(function (r) { return r.value; }), f.map(function (r) { return r.observed_share; })),
-              backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 1, order: 2 },
-            { type: 'line', label: 'Theoretical P(X = k)', data: FX.charts.xy(f.map(function (r) { return r.value; }), f.map(function (r) { return r.expected_share; })),
-              borderColor: c.s2, backgroundColor: c.s2, pointRadius: 3, borderWidth: 2, order: 1 }
-          ] },
-          options: { scales: { x: FX.charts.axis('k', { extra: { offset: true } }), y: FX.charts.axis('Proportion', { extra: { beginAtZero: true } }) } }
-        });
-      } else {
-        var h = d.sample.histogram;
-        FX.charts.histogram('dist-sample-chart', h, {
-          xTitle: 'x', barLabel: 'Sample density',
-          curve: d.discrete ? null : { x: cur.x, y: cur.density }, curveLabel: 'Theoretical density f(x)'
-        });
-      }
+      poisGrid.appendChild(ui.chartCard({ id: 'prob-pois-chart', title: 'Poisson: extreme moves per ' + po.block + ' candles',
+        note: 'An extreme move is a return more than 2 SD from the mean. λ = ' + fmt.num(po.lambda, 3) + ' per block, from ' + po.n_blocks + ' blocks.' }));
+      compareBars('prob-pois-chart', po.k.map(String), po.observed_share, po.pmf, 'k = extreme moves in a block', 'Poisson model');
     }
-  }
 
-  function run(form) {
-    var body = ui.readForm(form);
-    body.query = { type: body.query_type, a: body.query ? body.query.a : undefined, b: body.query ? body.query.b : undefined };
-    delete body.query_type;
-    return ui.runAnalysis({
-      state: state, form: form, results: document.getElementById('dist-results'), loadingText: 'R is calculating…',
-      request: function () { return FX.api.post('/distribution', body); },
-      render: render
-    });
+    // Unit 2: normal
+    var no = p.normal;
+    var normGrid = ui.el('div', { class: 'grid-2' });
+    root.appendChild(ui.section((po ? '5' : '4') + '. Normal distribution of the returns', [
+      formula('R ~ N(μ = ' + fmt.num(no.mean, 4) + '%, σ = ' + fmt.num(no.sd, 4) + '%)      Z = (R − μ) / σ      M(t) = exp(μt + σ²t²/2)      skewness = 0, kurtosis = 3'),
+      ui.cards([
+        { label: 'Mean μ', value: fmt.num(no.mean, 4) + '%' },
+        { label: 'Variance σ²', value: fmt.sig(no.variance, 4) },
+        { label: 'P(R > 0) under the normal', value: pct(no.comparisons[0].normal), sub: 'observed ' + pct(no.comparisons[0].observed) },
+        { label: 'Moment generating function', value: 'M(t)', sub: no.mgf }
+      ]),
+      normGrid
+    ]));
+    normGrid.appendChild(ui.chartCard({ id: 'prob-norm-chart', title: 'Normal model vs the chart', note: 'Probabilities of events for a return, under N(μ, σ²) and as observed.' }));
+    compareBars('prob-norm-chart', no.comparisons.map(function (x) { return x.event; }), no.comparisons.map(function (x) { return x.observed; }),
+                no.comparisons.map(function (x) { return x.normal; }), 'Event', 'Normal model');
   }
 
   FX.sections.register('distributions', {
-    init: function () {
-      ui = FX.ui; fmt = FX.fmt;
-      var form = document.getElementById('dist-form');
-      var select = form.querySelector('[name="distribution"]');
-      select.addEventListener('change', function () { buildParams(form, select.value); ui.clearFieldErrors(form); });
-      form.querySelector('[name="query_type"]').addEventListener('change', function () { toggleB(form); });
-      form.addEventListener('submit', function (e) { e.preventDefault(); run(form); });
-    },
-    // Load the distribution catalogue from R (retried on every visit until it succeeds).
-    show: function () {
-      if (catalogue.length) return;
-      var form = document.getElementById('dist-form');
-      var select = form.querySelector('[name="distribution"]');
-      FX.defaults().then(function (defs) {
-        catalogue = defs.distributions;
-        select.replaceChildren();
-        catalogue.forEach(function (d) { select.appendChild(ui.el('option', { value: d.id, text: d.label })); });
-        buildParams(form, select.value);
-        toggleB(form);
-        if (!state.ran) { state.ran = true; run(form); }
-      }).catch(function (err) {
-        document.getElementById('dist-results').replaceChildren(ui.banner('error', null, [err.message]));
-      });
-    }
+    init: function () { ui = FX.ui; fmt = FX.fmt; },
+    show: function () { return FX.chart.renderInto('prob-results', state, render); }
   });
 })();

@@ -8,13 +8,13 @@
 #               "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" backend/main.R
 #             (or double-click start_fxlab.bat)
 #
-# Then open http://127.0.0.1:8000/  (the API also answers at /health, /simulate, ...)
+# Then open http://127.0.0.1:8000/  (the API also answers at /health, /chart/analyze, ...)
 # Stop the server with Esc in RStudio or Ctrl+C in the terminal.
 # Change the port with the environment variable FXLAB_PORT (default 8000).
 # =============================================================================
 
 # ---- 1. Packages ------------------------------------------------------------------------
-required <- c("plumber", "jsonlite")
+required <- c("plumber", "jsonlite", "png", "jpeg", "tesseract")
 missing_pkgs <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]
 if (length(missing_pkgs) > 0) {
   stop("Missing R package(s): ", paste(missing_pkgs, collapse = ", "),

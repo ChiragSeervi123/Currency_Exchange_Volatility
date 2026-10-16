@@ -38,6 +38,13 @@
         .replace(/\bmu(\d?)\b/g, 'μ$1').replace(/\bsigma(\d?)\^2/g, 'σ$1²').replace(/\bsigma(\d?)\b/g, 'σ$1');
     },
     rate: function (x) { return isNum(x) ? FX.fmt.num(x, 4) : '—'; },
+    // Prices read from a chart: decimals by magnitude (64,174.19 · 88.583 · 0.61234).
+    price: function (x) {
+      if (!isNum(x)) return '—';
+      var a = Math.abs(x);
+      return FX.fmt.num(x, a >= 1000 ? 2 : a >= 10 ? 3 : a >= 1 ? 4 : 5);
+    },
+    signedPct: function (x, digits) { return isNum(x) ? (x >= 0 ? '+' : '') + FX.fmt.num(x, digits == null ? 2 : digits) + '%' : '—'; },
     text: function (x) { return x == null || x === '' ? '—' : String(x); }
   };
 })();

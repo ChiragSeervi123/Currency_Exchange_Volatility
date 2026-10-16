@@ -1,110 +1,87 @@
-/* descriptive.js - Descriptive Statistics via POST /statistics. */
+/* descriptive.js - Descriptive Statistics of the uploaded chart (computed by R; this file only draws them).
+   Shown: summary statistics (with moments), histogram with the fitted normal curve, and a bar graph of
+   observed against normal frequencies. */
 (function () {
   var ui, fmt;
-  var state = { busy: false, version: -1 };
+  var state = { version: -1 };
 
-  function statsTable(s, kind) {
-    var d = kind === 'level' ? 4 : 5;
+  function summaryTable(r, p) {
     var n = function (x) { return fmt.sig(x, 6); };
-    return ui.kvTable('Summary statistics (R)', [
-      ['Valid observations (n)', fmt.int(s.n)],
-      ['Mean', n(s.mean)], ['Median', n(s.median)], ['Minimum', n(s.min)], ['Maximum', n(s.max)], ['Range', n(s.range)],
-      ['Sample variance s² (divisor n − 1)', n(s.variance)],
-      ['Population variance (divisor n)', n(s.variance_population)],
-      ['Sample standard deviation s', n(s.sd)],
-      ['Standard error of the mean s / √n', n(s.standard_error)],
-      ['First quartile Q1', n(s.q1)], ['Third quartile Q3', n(s.q3)], ['Interquartile range', n(s.iqr)],
-      ['Skewness', fmt.num(s.skewness, 4)], ['Kurtosis (normal = 3)', fmt.num(s.kurtosis, 4)],
-      ['Excess kurtosis', fmt.num(s.excess_kurtosis, 4)],
-      s.cv_pct != null ? ['Coefficient of variation', fmt.pct(s.cv_pct, d > 4 ? 2 : 3)] : null
+    var mo = r.moments;
+    return ui.kvTable('Summary statistics of the returns per candle (%) — computed in R', [
+      ['Number of returns (n)', fmt.int(r.n)],
+      ['Mean x̄ = Σx / n', n(r.mean)],
+      ['Median', n(r.median)],
+      ['Mode (grouped: L + (f₁ − f₀) / (2f₁ − f₀ − f₂) × h)', n(r.mode.value)],
+      ['Minimum', n(r.min)], ['Maximum', n(r.max)], ['Range', n(r.range)],
+      ['First quartile Q₁', n(r.q1)], ['Third quartile Q₃', n(r.q3)], ['Interquartile range Q₃ − Q₁', n(r.iqr)],
+      ['Sample variance s² = Σ(x − x̄)² / (n − 1)', n(r.variance)],
+      ['Population variance σ² = Σ(x − x̄)² / n', n(r.variance_population)],
+      ['Standard deviation s', n(r.sd)],
+      ['Standard error s / √n', n(r.standard_error)],
+      ['Raw moments μ′₁, μ′₂, μ′₃, μ′₄ (about 0)', mo.raw.map(function (x) { return fmt.sig(x, 4); }).join(' · ')],
+      ['Central moments μ₁, μ₂, μ₃, μ₄ (about the mean)', mo.central.map(function (x) { return fmt.sig(x, 4); }).join(' · ')],
+      ['β₁ = μ₃² / μ₂³', fmt.num(mo.beta1, 4)], ['β₂ = μ₄ / μ₂²', fmt.num(mo.beta2, 4)],
+      ['Skewness γ₁ = μ₃ / μ₂^(3/2)  (normal = 0)', fmt.num(r.skewness, 4)],
+      ['Kurtosis β₂  (normal = 3)', fmt.num(r.kurtosis, 4)],
+      ['Excess kurtosis γ₂ = β₂ − 3', fmt.num(r.excess_kurtosis, 4)],
+      ['Prices: mean · median · mode', fmt.price(p.mean) + ' · ' + fmt.price(p.median) + ' · ' + fmt.price(p.mode.value)],
+      ['Prices: standard deviation · coefficient of variation', fmt.price(p.sd) + ' · ' + fmt.pct(p.cv_pct, 2)]
     ]);
   }
 
-  function render(d, root) {
-    var s = d.statistics;
-    root.appendChild(ui.el('p', { class: 'meta', text: d.data_description }));
+  function bandChart(id, bands, n) {
+    var c = FX.charts.colors();
+    FX.charts.render(id, {
+      type: 'bar',
+      data: { labels: bands.map(function (b) { return b.band; }), datasets: [
+        { label: 'Observed (chart)', data: bands.map(function (b) { return 100 * b.observed_share; }), backgroundColor: c.s1, barPercentage: 0.9, categoryPercentage: 0.75 },
+        { label: 'Normal distribution', data: bands.map(function (b) { return 100 * b.normal_share; }), backgroundColor: c.s2, barPercentage: 0.9, categoryPercentage: 0.75 }
+      ] },
+      options: {
+        interaction: { mode: 'index', intersect: false },
+        plugins: { tooltip: { callbacks: { label: function (item) {
+          var b = bands[item.dataIndex];
+          return item.dataset.label + ': ' + fmt.num(item.parsed.y, 1) + '% (' + (item.datasetIndex ? fmt.num(b.normal_count, 1) : fmt.int(b.observed)) + ' of ' + n + ')';
+        } } } },
+        scales: { x: FX.charts.axis('Distance from the mean', { type: 'category' }),
+                  y: FX.charts.axis('Share of returns (%)', { extra: { beginAtZero: true } }) }
+      }
+    });
+  }
+
+  function render(a, root) {
+    var d = a.descriptive, r = d.returns, p = d.prices, c = a.chart;
+    root.appendChild(ui.el('p', { class: 'meta', text: c.name + ' · ' + fmt.int(r.n) + ' returns per ' + (c.interval ? c.interval + ' candle' : 'candle') +
+      ' from ' + fmt.int(c.n_points) + ' prices read from the chart · r = 100 · ln(Pₜ / Pₜ₋₁)' }));
     root.appendChild(ui.cards([
-      { label: 'Observations', value: fmt.int(s.n), sub: s.n_excluded ? s.n_excluded + ' excluded' : 'all valid' },
-      { label: 'Mean', value: fmt.sig(s.mean, 5), sub: d.label },
-      { label: 'Median', value: fmt.sig(s.median, 5) },
-      { label: 'Standard deviation', value: fmt.sig(s.sd, 5), sub: 'sample, n − 1' },
-      { label: 'Skewness', value: fmt.num(s.skewness, 3), sub: 'normal = 0' },
-      { label: 'Excess kurtosis', value: fmt.num(s.excess_kurtosis, 3), sub: 'normal = 0' }
+      { label: 'Mean return', value: fmt.num(r.mean, 4) + '%', sub: 'per candle' },
+      { label: 'Median', value: fmt.num(r.median, 4) + '%' },
+      { label: 'Mode (grouped)', value: fmt.num(r.mode.value, 4) + '%', sub: 'modal class ' + fmt.num(r.mode.modal_class[0], 3) + ' to ' + fmt.num(r.mode.modal_class[1], 3) },
+      { label: 'Standard deviation', value: fmt.num(r.sd, 4) + '%', sub: 'volatility per candle' },
+      { label: 'Skewness', value: fmt.num(r.skewness, 3), sub: 'normal = 0' },
+      { label: 'Kurtosis', value: fmt.num(r.kurtosis, 3), sub: 'normal = 3' }
     ]));
     root.appendChild(ui.el('p', { class: 'interpretation', text: d.shape_interpretation }));
-    if (d.volatility) {
-      var v = d.volatility;
-      root.appendChild(ui.cards([
-        { label: 'Daily volatility', value: fmt.pct(v.daily_sd_pct, 4), sub: 'SD of daily log returns' },
-        { label: 'Annualised volatility', value: fmt.pct(v.annualised_vol_pct, 2), sub: 'daily SD × √' + v.trading_days_per_year },
-        { label: 'Mean absolute daily return', value: fmt.pct(v.mean_abs_return_pct, 4) },
-        d.cumulative_return_pct != null ? { label: 'Cumulative return', value: fmt.pct(d.cumulative_return_pct, 2), sub: 'first to last price' } : null,
-        v.rolling_latest_pct != null ? { label: 'Latest ' + v.rolling_window + '-day volatility', value: fmt.pct(v.rolling_latest_pct, 2), sub: 'annualised, ' + v.rolling_latest_date } : null
-      ]));
-    }
+
     var grid = ui.el('div', { class: 'grid-2' });
     root.appendChild(grid);
     grid.appendChild(ui.chartCard({ id: 'desc-hist-chart', title: 'Histogram with fitted normal curve',
-      note: 'Bars: R\'s histogram (Freedman–Diaconis bins). Curve: normal density with the sample mean and SD.' }));
-    FX.charts.histogram('desc-hist-chart', d.histogram, {
-      xTitle: d.label, curve: d.normal_fit ? { x: d.normal_fit.x, y: d.normal_fit.density } : null,
-      curveLabel: 'Normal density (same mean and SD)', barLabel: 'Observed density'
+      note: 'Bars: R\'s histogram of the returns (Freedman–Diaconis bins). Curve: normal density with the same mean and SD.' }));
+    FX.charts.histogram('desc-hist-chart', d.returns_histogram, {
+      xTitle: 'Return per candle (%)', curve: d.normal_fit ? { x: d.normal_fit.x, y: d.normal_fit.density } : null,
+      curveLabel: 'Fitted normal curve', barLabel: 'Observed density'
     });
-    if (d.qq) {
-      grid.appendChild(ui.chartCard({ id: 'desc-qq-chart', title: 'Normal Q-Q plot',
-        note: 'Points on the line = normal. Points bending away at the ends = heavier tails' + (d.qq.n_shown < d.qq.n ? ' (' + d.qq.n_shown + ' of ' + d.qq.n + ' quantiles shown).' : '.') }));
-      FX.charts.qq('desc-qq-chart', d.qq);
-    }
-    var two = ui.el('div', { class: 'grid-2' }, [
-      statsTable(s, d.kind),
-      ui.table({ caption: 'Percentiles (R quantile type 7)',
-        columns: [{ key: 'percentile', label: 'Percentile', num: true, format: function (x) { return fmt.num(x, 0) + 'th'; } },
-                  { key: 'value', label: 'Value', num: true, format: function (x) { return fmt.sig(x, 6); } }],
-        rows: s.quantiles })
-    ]);
-    root.appendChild(two);
-    if (d.tails) {
-      root.appendChild(ui.table({
-        caption: 'Tail check: share of observations more than k standard deviations from the mean',
-        columns: [
-          { key: 'k_sd', label: 'k', num: true, format: function (x) { return '|z| > ' + x; } },
-          { key: 'empirical_count', label: 'Count', num: true, format: fmt.int },
-          { key: 'empirical_share', label: 'Observed share', num: true, format: function (x) { return fmt.prob(x, 3); } },
-          { key: 'normal_share', label: 'Normal distribution', num: true, format: function (x) { return fmt.prob(x, 3); } },
-          { key: 'ratio', label: 'Ratio', num: true, format: function (x) { return fmt.num(x, 2) + '×'; } }
-        ],
-        rows: d.tails
-      }));
-    }
-    if (d.level_statistics) {
-      var l = d.level_statistics;
-      root.appendChild(ui.kvTable('The entered prices themselves', [
-        ['n', fmt.int(l.n)], ['Mean', fmt.sig(l.mean, 6)], ['SD', fmt.sig(l.sd, 6)], ['Min', fmt.sig(l.min, 6)], ['Max', fmt.sig(l.max, 6)]
-      ]));
-    }
-    root.appendChild(ui.warnings((s.warnings || []).concat(d.note ? [d.note] : [])));
-  }
+    grid.appendChild(ui.chartCard({ id: 'desc-band-chart', title: 'Observed vs normal frequencies (bar graph)',
+      note: 'Share of returns in each band of standard deviations from the mean. Taller outer bars than the normal = heavier tails.' }));
+    bandChart('desc-band-chart', d.sigma_bands, r.n);
 
-  function run(form) {
-    var results = document.getElementById('desc-results');
-    state.version = FX.dataVersion;
-    return ui.runAnalysis({
-      state: state, form: form, results: results, loadingText: 'R is calculating the statistics…',
-      request: function () { return FX.api.post('/statistics', ui.readForm(form)); },
-      render: render
-    }).then(function (ok) { if (ok === false) state.version = -1; });
+    root.appendChild(summaryTable(r, p));
+    root.appendChild(ui.warnings((r.warnings || []).concat(c.notes || [])));
   }
 
   FX.sections.register('descriptive', {
-    init: function () {
-      ui = FX.ui; fmt = FX.fmt;
-      var form = document.getElementById('desc-form');
-      form.addEventListener('change', function (e) {
-        if (e.target.name === 'source') ui.toggleBy(form, 'source', e.target.value);
-      });
-      ui.toggleBy(form, 'source', 'historical');
-      form.addEventListener('submit', function (e) { e.preventDefault(); run(form); });
-    },
-    show: function () { if (state.version !== FX.dataVersion) run(document.getElementById('desc-form')); }
+    init: function () { ui = FX.ui; fmt = FX.fmt; },
+    show: function () { return FX.chart.renderInto('desc-results', state, render); }
   });
 })();

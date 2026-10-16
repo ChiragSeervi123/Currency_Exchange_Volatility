@@ -19,7 +19,7 @@ FXLAB_CONFIG <- list(
   port = as.integer(Sys.getenv("FXLAB_PORT", "8000")),
   serve_frontend   = TRUE,          # serve frontend/ at /app/ from the same R process
   frontend_mount   = "/app",
-  max_request_mb   = 6,             # larger request bodies are rejected (HTTP 413)
+  max_request_mb   = 14,            # larger request bodies are rejected (HTTP 413); an 8 MB image is ~11 MB as base64
 
   # Browsers may call the API from these origins (cross-origin requests).
   # Pages served by the API itself are same-origin and need no CORS.
@@ -57,31 +57,13 @@ FXLAB_CONFIG <- list(
   allowed_alpha         = c(0.01, 0.05, 0.10),
   ljung_box_default_lag = 10,
 
-  # ---- Simulation defaults (used only when no historical data is available) -------
-  # These are illustrative example inputs, NOT market data.
-  fallback_simulation = list(start_rate = 85, mu_daily_pct = 0.01, sigma_daily_pct = 0.30),
-  default_simulation  = list(days = 180, n_paths = 500, n_display_paths = 20, seed = 2026,
-                             model = "gbm_normal", t_df = 5),
-  simulation_models = list(
-    list(id = "gbm_normal", label = "Normal (Geometric Brownian Motion)",
-         description = "Classic GBM: daily log-returns are normal with mean (mu - sigma^2/2) and SD sigma."),
-    list(id = "gbm_student_t", label = "Student-t (heavy-tailed GBM)",
-         description = "Same drift and volatility, but shocks follow a Student-t distribution rescaled to variance 1, producing more extreme days."),
-    list(id = "gbm_bootstrap", label = "Historical bootstrap (GBM)",
-         description = "Shocks are resampled from standardised historical USD/INR log-returns, then scaled to the chosen drift and volatility.")
-  ),
+  # ---- Chart screenshots -------------------------------------------------------------
+  # Candle intervals the upload panel offers (only used as a label: "per 1D candle").
+  chart_intervals = c("1m", "5m", "15m", "30m", "1h", "2h", "4h", "1D", "1W", "1M"),
 
   # ---- Safety limits -----------------------------------------------------------------
   limits = list(
-    sim_max_days          = 1000,      # about four trading years
-    sim_max_paths         = 10000,
-    sim_max_cells         = 5e6,       # days x paths
-    sim_max_display_paths = 500,
-    sim_max_display_points = 100000,   # displayed paths x (days + 1) values returned for charts
-    sim_min_t_df          = 3,         # the variance of a t distribution needs df > 2
-    sim_max_t_df          = 100,
-    max_daily_sigma_pct   = 20,
-    max_abs_daily_mu_pct  = 5,
+    chart_max_bytes       = 8 * 1024^2,  # uploaded screenshot (PNG or JPEG)
     custom_max_values     = 20000,
     custom_min_values     = 2,
     dist_max_sample       = 100000,

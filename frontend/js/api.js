@@ -38,7 +38,7 @@
     } catch (err) {
       if (err && err.name === 'AbortError') {
         throw new ApiError('The R backend did not answer within ' + FX.config.requestTimeoutMs / 1000 +
-          ' seconds. Try smaller inputs.', { code: 'TIMEOUT', network: true });
+          ' seconds. Try a smaller screenshot.', { code: 'TIMEOUT', network: true });
       }
       FX.status && FX.status.markOffline();
       throw new ApiError(offlineMessage(), { code: 'NETWORK', network: true });
@@ -82,6 +82,8 @@
   FX.api = {
     get: function (path, params) { return request('GET', path + query(params)); },
     post: function (path, body) { return request('POST', path, body || {}); },
+    // Large one-off requests (the chart image): sent directly, without the duplicate-request cache.
+    upload: function (path, body) { return send('POST', path, body); },
     health: function () { return send('GET', '/health'); },
     offlineMessage: offlineMessage
   };

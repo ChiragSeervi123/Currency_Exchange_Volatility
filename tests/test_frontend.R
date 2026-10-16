@@ -1,6 +1,6 @@
 # Browser end-to-end tests: a headless Chrome (via the chromote package) opens the web
-# interface served by the R backend, drives the dashboard and its Simulation Parameters
-# panel, and checks that the page shows exactly the values R returned. Skipped
+# interface served by the R backend, uploads a chart screenshot through the Chart Upload
+# panel, and checks that every page shows exactly the values R returned. Skipped
 # automatically when chromote or Chrome is unavailable, or when FXLAB_SKIP_BROWSER=1.
 skip_if(Sys.getenv("FXLAB_SKIP_BROWSER") == "1", "FXLAB_SKIP_BROWSER=1")
 skip_if_not_installed("chromote")
@@ -77,178 +77,165 @@ click_el <- function(selector) {
 }
 visible_view <- function() js("Array.prototype.filter.call(document.querySelectorAll('.view'), function(v){return !v.hidden}).map(function(v){return v.id}).join(',')")
 kpi <- function(id) js(sprintf("document.querySelector('#%s [data-kpi=value]').textContent", id))
-rupee <- function(x) paste0("₹", formatC(x, format = "f", digits = 2, big.mark = ","))
-params_visible <- function() js("document.getElementById('sim-params').getClientRects().length > 0")
+price <- function(x) formatC(x, format = "f", digits = if (abs(x) >= 1000) 2 else if (abs(x) >= 10) 3 else 4, big.mark = ",")
+upload_visible <- function() js("document.getElementById('chart-upload').getClientRects().length > 0")
+fixture_path <- function(name) normalizePath(file.path(FXLAB_ROOT, "tests", "fixtures", name), winslash = "\\")
+
+# Put a file into the Chart Upload input exactly as the file picker would.
+choose_file <- function(path) {
+  doc <- browser$DOM$getDocument()
+  node <- browser$DOM$querySelector(doc$root$nodeId, "#chart-file")
+  browser$DOM$setFileInputFiles(files = list(path), nodeId = node$nodeId)
+  Sys.sleep(0.4)
+}
+analyze <- function() {
+  wait_until("!document.querySelector('#upload-form button[type=submit]').disabled", 10)
+  js("document.querySelector('#upload-form button[type=submit]').scrollIntoView({ block: 'center' }); true")
+  click_el("#upload-form button[type=submit]")
+  wait_until("!FX.chart.isBusy()", 90)
+}
 
 # Load the app once; if this headless browser cannot even load the page (an environment
 # problem, not an FXLab one), skip instead of producing a cascade of time-outs.
 first_load <- tryCatch({ open_view("#/dashboard", timeout = 90); TRUE }, error = function(e) FALSE)
 skip_if(!first_load, "the headless browser could not load the page within 90 seconds")
 
-test_that("the dashboard runs the default simulation in R and shows R's values", {
-  expect_true(wait_until("document.querySelector('#kpi-mean [data-kpi=value]').textContent !== '—'"))
+test_that("before an upload the app asks for a chart and has no other inputs", {
   expect_true(wait_until("document.querySelector('#status-button').classList.contains('is-online')"))
-  # KPI 1 is the last observation in the dataset (not a live quote).
-  expect_equal(kpi("kpi-rate"), rupee(historical_summary()$latest$rate))
-  # KPIs 2-4 and the side statistics equal the API response for the very same request.
-  body <- js("JSON.stringify(FX.simParams.requestBody())")
-  api <- api_call(server, "POST", "/simulate", raw = body)$json$data
-  expect_equal(kpi("kpi-mean"), rupee(api$terminal$mean))
-  expect_equal(kpi("kpi-vol"), paste0(formatC(api$daily_returns$sd_pct, format = "f", digits = 2), "%"))
-  expect_equal(kpi("kpi-return"), paste0(if (api$terminal$mean_return_pct >= 0) "+" else "",
-                                         formatC(api$terminal$mean_return_pct, format = "f", digits = 2), "%"))
-  expect_equal(js("document.querySelector('[data-mc=mean]').textContent"), rupee(api$terminal$mean))
-  expect_equal(js("document.querySelector('[data-mc=low]').textContent"), rupee(api$terminal$min))
+  expect_equal(kpi("kpi-last"), "—")
+  expect_match(js("document.querySelector('[data-state-for=chart-series]').textContent"), "Upload a chart")
+  expect_true(js("document.querySelector('#upload-form button[type=submit]').disabled"))
+  # The Chart Upload panel is the only place with inputs (the chart-view toggle only changes the view).
+  outside <- js("Array.prototype.filter.call(document.querySelectorAll('main input, main select, main textarea'), function(e){ return !e.closest('#chart-upload') && !e.classList.contains('chip-select'); }).length")
+  expect_equal(outside, 0)
+  for (v in c("descriptive", "distributions", "hypothesis", "regression", "data")) {
+    open_view(paste0("#/", v))
+    expect_true(wait_until(sprintf("!!document.querySelector('#view-%s .empty-chart')", v), 10), label = v)
+  }
+  open_view("#/dashboard")
+})
+
+test_that("uploading a screenshot sends it to R and the dashboard shows R's values", {
+  choose_file(fixture_path("btc_dark_candles.png"))
+  expect_match(js("document.getElementById('chart-file-name').textContent"), "btc_dark_candles.png")
+  expect_false(js("document.getElementById('chart-preview').hidden"))
+  expect_true(analyze())
+  expect_match(js("document.getElementById('upload-message').textContent"), "R read 120 candles")
+  # The page shows exactly what the API computes for the same image.
+  f <- file.path(FXLAB_ROOT, "tests", "fixtures", "btc_dark_candles.png")
+  api <- chart_analyze_raw(readBin(f, "raw", file.size(f)))
+  n <- length(api$series$close)
+  expect_equal(kpi("kpi-last"), price(api$series$close[n]))
+  expect_equal(kpi("kpi-mean"), price(api$overview$mean_price))
+  expect_equal(kpi("kpi-vol"), paste0(formatC(api$overview$sd_return, format = "f", digits = 2), "%"))
   expect_equal(js("document.querySelector('#dist-stats [data-stat=kurtosis]').textContent"),
-               formatC(api$daily_returns$kurtosis, format = "f", digits = 3))
-  # Charts drawn from the response; "All Paths" shows every returned path plus the mean path.
-  expect_equal(js("FX.charts.get('chart-paths').data.datasets.length"), length(api$paths$values) + 1)
-  expect_true(js("!!FX.charts.get('chart-dist') && !!FX.charts.get('chart-mc')"))
-  expect_equal(js("document.getElementById('paths-select').value"), as.character(length(api$paths$values)))
+               formatC(api$descriptive$returns$kurtosis, format = "f", digits = 3))
+  expect_equal(js("document.querySelector('[data-out=expected]').textContent"), price(api$hypothesis$outlook$expected_price))
+  expect_true(js("!!document.querySelector('#outlook-body .verdict-' + FX.chart.current().hypothesis.outlook.verdict)"))
+  expect_equal(js("FX.charts.get('chart-series').data.labels.length"), n)
+  expect_match(js("document.getElementById('pair-label').textContent"), "Bitcoin / TetherUS")
+  # The overlay view draws the extracted points on the uploaded image.
+  js("var s=document.getElementById('series-view'); s.value='overlay'; s.dispatchEvent(new Event('change')); true")
+  expect_true(wait_until("document.getElementById('overlay-img').complete && document.getElementById('overlay-img').naturalWidth === 1600", 10))
+  expect_equal(js("document.querySelectorAll('#overlay-svg circle').length"), n)
+  js("var s=document.getElementById('series-view'); s.value='series'; s.dispatchEvent(new Event('change')); true")
 })
 
-test_that("Simulation Parameters is a fixed part of the dashboard, not a pop-up", {
-  # No gear in the navigation rail, no toggle, no close button.
+test_that("Chart Upload is a fixed part of the dashboard, aligned on shared lines", {
+  js("window.scrollTo(0, 0); true"); Sys.sleep(0.3)
   expect_equal(js("document.querySelectorAll('#app-nav use[href$=i-settings]').length"), 0)
-  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 7)
-  expect_null(js("document.getElementById('drawer-toggle')"))
-  expect_equal(js("document.querySelectorAll('#sim-params [data-action=close-drawer], #sim-params [aria-label*=Close]').length"), 0)
-  # It belongs to the Exchange Rate Dashboard page and is shown there.
-  expect_true(js("!!document.querySelector('#view-dashboard #sim-params')"))
-  expect_true(params_visible())
-  where <- function() js("JSON.stringify(document.getElementById('sim-params').getBoundingClientRect())")
-  before <- where()
-  key("Escape")
-  click_el(".hero-title")
-  expect_true(params_visible())                        # nothing closes it
-  expect_equal(where(), before)                        # and nothing moves it
-})
-
-test_that("desktop dashboard is aligned on shared lines", {
+  expect_true(js("!!document.querySelector('#view-dashboard #chart-upload')"))
   box <- function(sel) jsonlite::fromJSON(js(sprintf("JSON.stringify(document.querySelector('%s').getBoundingClientRect())", sel)))
-  params <- box("#sim-params"); eyebrow <- box("#view-dashboard .eyebrow"); rail <- box(".rail-btn")
+  panel <- box("#chart-upload"); kpis <- box("#kpis"); rail <- box(".rail-btn")
   lower <- box("#view-dashboard .lower"); brand <- box(".brand")
-  # One top line: first rail icon, Simulation Parameters panel and "Explore · Analyze · Simulate".
-  expect_lt(abs(params$top - eyebrow$top), 1)
-  expect_lt(abs(params$top - rail$top), 1)
-  expect_gt(params$top, brand$bottom)                  # clear of the FXLab brand block
-  # One bottom line: the panel ends with the Distribution / Monte Carlo panels, without inner scrolling.
-  expect_lt(abs(params$bottom - lower$bottom), 1)
-  expect_lte(js("(function(p){ return p.scrollHeight - p.clientHeight; })(document.getElementById('sim-params'))"), 0)
-  # The title block sits right of the panel; its subtitle is a single line.
-  expect_gt(eyebrow$left, params$right)
-  expect_equal(js("(function(e){ return Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)); })(document.querySelector('.hero-sub'))"), 1)
+  expect_lt(abs(panel$top - kpis$top), 1)                 # KPI cards start level with the panel (no title block)
+  expect_equal(js("document.querySelectorAll('#view-dashboard .hero').length"), 0)
+  expect_lt(abs(panel$top - rail$top), 1)
+  expect_gt(panel$top, brand$bottom)
+  expect_lt(abs(panel$bottom - lower$bottom), 1)
+  expect_gt(kpis$left, panel$right)
+  key("Escape"); click_el("#kpi-mean")
+  expect_true(upload_visible())                         # nothing closes it
 })
 
-test_that("each rail icon opens its own section; Simulation Parameters appears only on the dashboard", {
-  icons <- c("#/descriptive" = "view-descriptive", "#/monte-carlo" = "view-monte-carlo", "#/hypothesis" = "view-hypothesis",
-             "#/regression" = "view-regression", "#/historical" = "view-historical", "#/about" = "view-about",
-             "#/dashboard" = "view-dashboard")
+test_that("each rail icon opens its own section; Monte Carlo is gone", {
+  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 6)
+  expect_null(js("document.getElementById('view-monte-carlo')"))
+  icons <- c("#/descriptive" = "view-descriptive", "#/hypothesis" = "view-hypothesis", "#/regression" = "view-regression",
+             "#/data" = "view-data", "#/about" = "view-about", "#/dashboard" = "view-dashboard")
   for (href in names(icons)) {
     click_el(sprintf('.rail-btn[href="%s"]', href))
     expect_equal(js("location.hash"), href)
     expect_equal(visible_view(), icons[[href]], label = href)
-    expect_equal(js("document.querySelector('.rail-btn[aria-current=page]').getAttribute('href')"), href)
-    expect_equal(params_visible(), href == "#/dashboard", label = paste("parameters panel on", href))
+    expect_equal(upload_visible(), href == "#/dashboard", label = paste("upload panel on", href))
   }
-  # The dashboard panel is the only simulation-parameter form in the app.
-  expect_equal(js("document.querySelectorAll('[name=sigma_daily_pct], [name=mu_daily_pct], [name=start_rate]').length"), 3)
-  expect_equal(js("document.querySelectorAll('#sim-params [name=sigma_daily_pct]').length"), 1)
 })
 
-test_that("Run Simulation sends the panel's parameters to R and updates the dashboard", {
-  js("var f=document.getElementById('params-form'); f.querySelector('[name=start_rate]').value='83';
-      f.querySelector('[name=mu_daily_pct]').value='0'; f.querySelector('[name=sigma_daily_pct]').value='1';
-      f.querySelector('[name=period]').value='6'; f.querySelector('[name=period_unit]').value='21'; true")
-  js("document.querySelector('#params-form button[type=submit]').click(); true")
-  expect_true(wait_until("/completed/.test(document.getElementById('params-message').textContent)"))
-  body <- jsonlite::fromJSON(js("JSON.stringify(FX.simParams.requestBody())"))
-  expect_equal(body$days, 126)                         # 6 months x 21 trading days
-  api <- api_call(server, "POST", "/simulate", raw = jsonlite::toJSON(body, auto_unbox = TRUE, digits = NA))$json$data
-  expect_equal(kpi("kpi-mean"), rupee(api$terminal$mean))
-  expect_equal(kpi("kpi-vol"), paste0(formatC(api$daily_returns$sd_pct, format = "f", digits = 2), "%"))
-  expect_equal(js("FX.charts.get('chart-paths').scales.x.max"), 126)
-  js("document.querySelector('#params-form [data-action=reset]').click(); true")
-  expect_equal(js("document.querySelector('#params-form [name=period]').value"), "180")
-})
-
-test_that("invalid parameters show validation messages instead of results", {
-  js("var f=document.getElementById('params-form'); f.querySelector('[name=n_paths]').value='0'; f.querySelector('button[type=submit]').click(); true")
-  expect_match(js("(document.querySelector('#params-form .field-error')||{}).textContent||''"), "at least 1")
-  # A value only the server can reject (days x paths limit) is reported by R next to the field.
-  js("var f=document.getElementById('params-form'); f.querySelector('[name=n_paths]').value='10000';
-      f.querySelector('[name=period]').value='3'; f.querySelector('[name=period_unit]').value='252';
-      f.querySelector('button[type=submit]').click(); true")
-  expect_true(wait_until("/exceeds the limit/.test(document.getElementById('params-message').textContent)"))
-  js("document.querySelector('#params-form [data-action=reset]').click(); true")
-})
-
-test_that("the Monte Carlo page analyses the current simulation without its own parameter form", {
-  click_el('.rail-btn[href="#/monte-carlo"]')
-  expect_false(params_visible())                       # the parameters panel belongs to the dashboard only
-  expect_equal(js("Array.prototype.map.call(document.querySelectorAll('#view-monte-carlo [name]'), function(e){return e.name}).join(',')"),
-               "paths_drawn,threshold")
-  expect_true(wait_until("!!FX.charts.get('mc-fan-chart')"))
-  sim <- jsonlite::fromJSON(js("JSON.stringify(FX.simulation.current().inputs)"))
-  seed <- js("FX.simulation.current().seed")
-  body <- list(start_rate = sim$start_rate, mu_daily_pct = sim$mu_daily_pct, sigma_daily_pct = sim$sigma_daily_pct,
-               days = sim$days, n_paths = sim$n_paths, model = sim$model, seed = seed, n_display_paths = sim$n_display_paths)
-  api <- api_call(server, "POST", "/simulate", body)$json$data
-  card <- function(start) js(sprintf("(function(){var cs=document.querySelectorAll('#mc-results .card');for(var i=0;i<cs.length;i++){if(cs[i].querySelector('.card-label').textContent.indexOf('%s')===0) return cs[i].querySelector('.card-value').textContent;} return null;})()", start))
-  expect_equal(card("Expected final rate"), formatC(api$terminal$mean, format = "f", digits = 4, big.mark = ","))
-  expect_match(js("document.getElementById('mc-params').textContent"), paste0("seed ", seed))
-  # "Paths drawn" only changes how many of the returned paths are drawn.
-  n_drawn <- function() js("FX.charts.get('mc-fan-chart').data.datasets.filter(function(d){return /Sample path/.test(d.label)}).length")
-  js("var s=document.getElementById('mc-paths-drawn'); s.value='50'; s.dispatchEvent(new Event('change')); true")
-  expect_true(wait_until("FX.charts.get('mc-fan-chart').data.datasets.filter(function(d){return /Sample path/.test(d.label)}).length === 50", 10))
-  # Threshold probabilities are computed by R for the same simulation (same inputs and seed).
-  js("document.getElementById('mc-threshold').value='90'; document.querySelector('#mc-form button[type=submit]').click(); true")
-  expect_equal(wait_for("mc-results"), "ok")
-  expect_true(wait_until("document.getElementById('mc-results').textContent.indexOf('P(S_T > 90.00)') >= 0"))
-  api_t <- api_call(server, "POST", "/simulate", c(body, list(threshold = 90)))$json$data
-  expect_equal(card("P(S_T > 90.00)"), paste0(formatC(100 * api_t$threshold$prob_above, format = "f", digits = 2), "%"))
-  expect_equal(card("Expected final rate"), formatC(api$terminal$mean, format = "f", digits = 4, big.mark = ","))
-  expect_equal(js("FX.simulation.current().seed"), seed)
-  expect_equal(js("document.querySelectorAll('#mc-results canvas').length"), 3)   # charts replaced, not stacked
-  # A threshold is required for this action.
-  js("document.getElementById('mc-threshold').value=''; document.querySelector('#mc-form button[type=submit]').click(); true")
-  expect_match(js("(document.querySelector('#mc-form .field-error')||{}).textContent||''"), "required")
-})
-
-test_that("every analysis page renders results from R without JavaScript errors", {
-  for (v in list(c("#/historical", "hist-results"), c("#/descriptive", "desc-results"),
-                 c("#/distributions", "dist-results"), c("#/hypothesis", "hyp-results"),
-                 c("#/regression", "reg-results"))) {
+test_that("every analysis page renders the uploaded chart's results without JavaScript errors", {
+  for (v in list(c("#/descriptive", "desc-results"), c("#/distributions", "prob-results"), c("#/hypothesis", "hyp-results"),
+                 c("#/regression", "reg-results"), c("#/data", "data-results"))) {
     open_view(v[1])
     expect_equal(wait_for(v[2]), "ok", label = v[1])
   }
-  expect_false(params_visible())
+  # Hypothesis page: formulas, every test and our hypothesis with its insights.
+  open_view("#/hypothesis")
+  wait_for("hyp-results")
+  a <- jsonlite::fromJSON(js("JSON.stringify(FX.chart.current().hypothesis)"), simplifyVector = FALSE)
+  expect_equal(js("document.querySelectorAll('#hyp-results .test-card').length"), length(a$tests))
+  expect_gte(js("document.querySelectorAll('#hyp-results .test-card .formula').length"), length(a$tests))
+  expect_match(js("document.getElementById('our-hypothesis').textContent"), "Insights from the graph")
+  # Descriptive page: summary table, histogram and bar graph; no percentile or tail tables.
+  open_view("#/descriptive")
+  wait_for("desc-results")
+  expect_true(js("!!FX.charts.get('desc-hist-chart') && !!FX.charts.get('desc-band-chart')"))
+  expect_false(grepl("Percentiles|Tail check|Q-Q", js("document.getElementById('desc-results').textContent")))
   expect_false(js("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"))
   expect_length(js_errors, 0)
+})
+
+test_that("the analysis survives a page refresh, and Clear removes it", {
+  open_view("#/regression")
+  expect_equal(wait_for("reg-results"), "ok")             # fetched again from R (GET /chart/current)
+  open_view("#/dashboard")
+  expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent !== '—'", 20))
+  click_el("#upload-form [data-action=clear]")
+  expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent === '—'", 10))
+  expect_null(api_call(server, "GET", "/chart/current")$json$data)
+})
+
+test_that("files that are not charts give a clear message", {
+  txt <- tempfile(fileext = ".txt"); writeLines("Date,Price", txt)
+  choose_file(normalizePath(txt, winslash = "\\"))
+  expect_match(js("document.getElementById('upload-message').textContent"), "not a PNG or JPEG")
+  expect_true(js("document.querySelector('#upload-form button[type=submit]').disabled"))
+  blank <- tempfile(fileext = ".png"); png::writePNG(array(1, c(400, 600, 3)), blank)
+  choose_file(normalizePath(blank, winslash = "\\"))
+  analyze()
+  expect_match(js("document.getElementById('upload-message').textContent"), "No candles or price line were found")
+  expect_equal(kpi("kpi-last"), "—")
 })
 
 test_that("the layout works at phone width without horizontal scrolling", {
   browser$Emulation$setDeviceMetricsOverride(width = 390, height = 844, deviceScaleFactor = 1, mobile = TRUE)
   on.exit(browser$Emulation$clearDeviceMetricsOverride(), add = TRUE)
   open_view("#/dashboard")
-  expect_true(wait_until("document.querySelector('#kpi-mean [data-kpi=value]').textContent !== '—'"))
+  choose_file(fixture_path("nifty_light_candles.png"))
+  expect_true(analyze())
+  expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent !== '—'"))
   expect_false(js("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"))
   expect_equal(js("getComputedStyle(document.getElementById('app-nav')).flexDirection"), "row")   # bottom bar
-  # The parameters panel is part of the page flow, under the title and above the KPI cards.
-  expect_true(params_visible())
-  expect_equal(js("getComputedStyle(document.getElementById('sim-params')).position"), "static")
-  expect_true(js("document.getElementById('sim-params').getBoundingClientRect().bottom <= document.getElementById('kpis').getBoundingClientRect().top"))
-  expect_true(js("document.getElementById('sim-params').getBoundingClientRect().right <= document.documentElement.clientWidth"))
+  expect_true(upload_visible())
+  expect_equal(js("getComputedStyle(document.getElementById('chart-upload')).position"), "static")
+  expect_true(js("document.getElementById('chart-upload').getBoundingClientRect().bottom <= document.getElementById('kpis').getBoundingClientRect().top"))
 })
 
 test_that("the page explains what to do when the backend is offline", {
-  open_view("#/descriptive")
-  expect_equal(wait_for("desc-results"), "ok")
+  open_view("#/dashboard")
+  choose_file(fixture_path("btc_dark_candles.png"))
   stop_fxlab_server(server)
   Sys.sleep(1)
-  js("document.querySelector('#desc-form button[type=submit]').click()")
-  msg <- wait_for("desc-results")
-  expect_match(msg, "Cannot reach the R backend")
+  analyze()
+  expect_match(js("document.getElementById('upload-message').textContent"), "Cannot reach the R backend")
   expect_true(wait_until("document.getElementById('status-button').classList.contains('is-offline')", 10))
   expect_false(js("document.getElementById('global-banner').hidden"))
 })

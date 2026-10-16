@@ -75,7 +75,7 @@
 
   /* layout */
   /* The brand block (top left) grows with the window width; the dashboard's top line (rail,
-     Simulation Parameters panel, "Explore · Analyze · Simulate") always starts below it. */
+     Chart Upload panel, KPI cards) always starts below it. */
   --brand-top: clamp(10px, 1.6vh, 18px);
   --brand-name-size: clamp(24px, 2.2vw, 34px);
   --brand-sub-size: clamp(11px, 0.85vw, 13.5px);
@@ -172,7 +172,8 @@ code { font-size: 0.92em; background: rgba(255, 255, 255, 0.08); padding: 1px 5p
   cursor: pointer;
 }
 .pill:hover { background: rgba(240, 244, 252, 0.24); }
-.flag { width: 22px; height: 15px; border-radius: 2px; }
+.pill-icon { width: 17px; height: 17px; color: var(--accent-2); }
+#pair-label { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .clock { display: flex; flex-direction: column; padding-left: clamp(10px, 1.2vw, 20px); border-left: 1px solid var(--glass-border-strong);
   font-size: 13px; line-height: 1.35; color: var(--text); font-variant-numeric: tabular-nums; }
 .clock #clock-time { color: #e8eef9; }
@@ -243,9 +244,9 @@ code { font-size: 0.92em; background: rgba(255, 255, 255, 0.08); padding: 1px 5p
 }
 .rail-btn:hover .rail-label, .rail-btn:focus-visible .rail-label { opacity: 1; transform: translate(0, -50%); }
 
-/* ---- 6. Simulation Parameters panel (part of the Exchange Rate Dashboard) ------------- */
+/* ---- 6. Chart Upload panel (part of the dashboard; the .sim-params styles are its frame) --- */
 /* Desktop: the panel is the left column of the dashboard grid (section 7): its top is level with
-   the "Explore · Analyze · Simulate" line and its bottom with the lower chart panels. It is part
+   the KPI cards and its bottom with the lower chart panels. It is part
    of the page and has no open/close behaviour; other pages do not show it. */
 .sim-params {
   display: flex;
@@ -289,6 +290,26 @@ code { font-size: 0.92em; background: rgba(255, 255, 255, 0.08); padding: 1px 5p
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 .split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 10px; }
+.split-even { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Chart Upload: the drop zone takes the free height of the panel; buttons stay on the bottom line. */
+.upload-form { justify-content: flex-start; }
+.upload-form .advanced .field { margin-bottom: 8px; }
+.upload-form .params-actions { margin-top: auto; }
+.dropzone {
+  position: relative; flex: 1; min-height: 150px; display: grid; place-items: center; padding: 14px; overflow: hidden;
+  border: 1.5px dashed var(--glass-border-strong); border-radius: var(--radius); background: rgba(8, 15, 32, 0.32);
+  cursor: pointer; text-align: center; transition: border-color 0.15s, background 0.15s;
+}
+.dropzone:hover, .dropzone.is-drag { border-color: var(--accent-2); background: rgba(47, 123, 255, 0.12); }
+.dropzone:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dropzone-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--text-2); font-size: 12.5px; }
+.dropzone-icon { width: 38px; height: 38px; color: var(--accent-2); }
+.dropzone-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.dropzone.has-file .dropzone-empty { display: none; }
+.dropzone-preview { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); object-fit: contain; border-radius: 8px; }
+.file-name { margin: -2px 0 0; font-size: 12px; color: var(--text-2); overflow-wrap: anywhere; }
+.file-name:empty { display: none; }
 .advanced summary { cursor: pointer; font-size: 12.5px; color: var(--text-2); }
 .advanced[open] summary { margin-bottom: 8px; }
 .params-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
@@ -303,12 +324,12 @@ code { font-size: 0.92em; background: rgba(255, 255, 255, 0.08); padding: 1px 5p
 }
 .workspace:focus { outline: none; }
 body.stage .workspace { padding-left: var(--params-left); }
-/* Desktop dashboard: two columns on shared lines - Simulation Parameters on the left, the title,
+/* Desktop dashboard: two columns on shared lines - Chart Upload on the left, the title,
    KPI cards and charts on the right. Every row starts and ends on the same level. */
 .view-dashboard {
   display: grid;
   grid-template-columns: var(--params-width) minmax(0, 1fr);
-  grid-template-areas: "params hero" "params kpis" "params main" "params lower" ". foot";
+  grid-template-areas: "params kpis" "params main" "params lower" ". foot";
   column-gap: clamp(18px, 2.3vw, 44px);
   row-gap: var(--row-gap);
   align-items: start;
@@ -377,6 +398,8 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 .swatch-mean { background: var(--series-1); height: 4px; }
 .swatch-normal { background: var(--series-2); }
 .swatch-bar { width: 10px; height: 10px; border-radius: 2px; background: var(--series-1); }
+.swatch-up { background: #22ab94; }
+.swatch-down { background: #f7525f; }
 .chip-select {
   height: 30px; padding: 0 26px 0 9px; width: auto;
   font: 500 11.5px var(--font); color: var(--text);
@@ -395,6 +418,8 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 
 .panel-chart { position: relative; height: clamp(150px, 19vh, 260px); }
 .panel-main .panel-chart { height: clamp(150px, 17.5vh, 300px); }
+/* Without a title block above it, the dashboard's price chart uses the freed height. */
+.view-dashboard .panel-main .panel-chart { height: clamp(180px, 27vh, 460px); }
 .chart-state {
   position: absolute; inset: 0; display: grid; place-items: center; padding: 12px; text-align: center;
   font-size: 13px; color: var(--text-2); border-radius: var(--radius-sm); background: rgba(10, 18, 36, 0.25);
@@ -432,14 +457,70 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 .mc-card.tone-green { background: var(--good-bg); border-color: var(--good-border); }
 .mc-card.tone-blue { background: rgba(47, 123, 255, 0.24); border-color: rgba(96, 165, 250, 0.5); }
 .footnote { margin: 14px 0 0; font-size: 12px; color: var(--muted); }
-.mc-params { margin: 0 0 12px; font-size: 13px; color: var(--text); }
-.mc-toolbar .form-grid { margin-bottom: 10px; }
+.mc-card .mc-value-sm { font-size: clamp(11.5px, 0.78vw, 14px); line-height: 1.25; overflow-wrap: anywhere; }
+
+/* Our Hypothesis panel (dashboard, lower right) and the verdict badge (also on the Hypothesis page) */
+.chip-link { font-size: 12px; font-weight: 600; color: var(--accent-2); text-decoration: none; padding: 5px 9px; border-radius: 8px;
+  border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.06); }
+.chip-link:hover { background: rgba(255, 255, 255, 0.12); }
+.outlook-body { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+.outlook-body .chart-state { position: static; min-height: 120px; }
+.verdict { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid; }
+.verdict-icon { display: grid; place-items: center; flex: none; width: 42px; height: 42px; border-radius: 50%; }
+.verdict-icon .icon { width: 22px; height: 22px; }
+.verdict-label { margin: 0 0 2px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-2); }
+.verdict-text { margin: 0; font-size: clamp(13.5px, 1vw, 16px); font-weight: 650; color: var(--text); }
+.verdict-note { margin: 0; font-size: 12px; color: var(--text-2); }
+.verdict-up { background: var(--good-bg); border-color: var(--good-border); }
+.verdict-up .verdict-icon { background: rgba(74, 222, 128, 0.25); color: var(--good); }
+.verdict-down { background: var(--bad-bg); border-color: var(--bad-border); }
+.verdict-down .verdict-icon { background: rgba(255, 122, 133, 0.25); color: var(--bad); }
+.verdict-sideways { background: rgba(47, 123, 255, 0.18); border-color: rgba(96, 165, 250, 0.5); }
+.verdict-sideways .verdict-icon { background: rgba(96, 165, 250, 0.28); color: #bcd6ff; }
+.verdict-lg { margin-bottom: 12px; }
+.verdict-lg .verdict-text { font-size: clamp(16px, 1.3vw, 20px); }
 
 .panel:fullscreen { padding: 24px; background: #101a32; border-radius: 0; display: flex; flex-direction: column; }
 .panel:fullscreen .panel-chart, .panel:fullscreen .dist-body { flex: 1; height: auto; }
 .panel:fullscreen .dist-chart .panel-chart { min-height: 0; }
 
+/* Extracted points drawn over the uploaded screenshot (dashboard and Chart Data page) */
+.overlay-view { position: absolute; inset: 0; margin: auto; max-width: 100%; max-height: 100%; }
+.overlay-view img, .overlay-view svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.overlay-view img { object-fit: fill; border-radius: 6px; }
+.overlay-static { position: relative; width: 100%; max-height: none; }
+.overlay-line { fill: none; stroke: #ffd60a; stroke-width: 1.4; vector-effect: non-scaling-stroke; opacity: 0.9; }
+.overlay-dot { fill: #ffd60a; stroke: #0c1324; stroke-width: 0.6; vector-effect: non-scaling-stroke; }
+.overlay-wick { stroke: rgba(255, 214, 10, 0.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.overlay-box { fill: none; stroke: rgba(255, 255, 255, 0.55); stroke-dasharray: 6 5; stroke-width: 1; vector-effect: non-scaling-stroke; }
+
 /* ---- 10. Analysis pages ---------------------------------------------------------- */
+.empty-chart .empty-title { margin: 0 0 6px; font-size: 15px; font-weight: 650; color: var(--text); }
+.empty-chart p { margin: 0; }
+.formula { margin: 0 0 10px; padding: 9px 12px; border-radius: var(--radius-sm); background: rgba(8, 15, 32, 0.45);
+  border: 1px solid var(--glass-border); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size: 12.5px;
+  color: #dbe6ff; overflow-x: auto; white-space: pre-wrap; }
+.steps { margin: 0 0 12px; padding-left: 20px; color: var(--text-2); font-size: 13px; }
+.steps li { margin-bottom: 4px; }
+.test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; }
+.test-card { display: flex; flex-direction: column; min-width: 0; padding: 14px; border-radius: var(--radius); background: var(--glass);
+  border: 1px solid var(--glass-border); border-top: 3px solid var(--good-border);
+  -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.test-card.is-reject { border-top-color: var(--bad-border); }
+.test-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.test-head h3 { margin: 0; font-size: 14.5px; font-weight: 650; }
+.test-head .badge { flex: none; }
+.test-card .hypotheses { margin-bottom: 8px; font-size: 13px; }
+.test-numbers { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px; margin: 0 0 8px; }
+.test-numbers div { padding: 6px 9px; border-radius: 8px; background: rgba(8, 15, 32, 0.35); }
+.test-numbers dt { font-size: 11px; color: var(--text-2); }
+.test-numbers dd { margin: 0; font-weight: 650; font-variant-numeric: tabular-nums; }
+.test-conclusion { margin: 0 0 8px; font-size: 13px; color: var(--text); }
+.test-card .chart-note { color: var(--text-2); font-size: 12px; margin: 0 0 8px; }
+.chart-box-sm { height: 170px; margin-top: auto; }
+.outlook-panel { margin-top: 18px; padding: 16px; }
+.insight-lists .subhead:first-child { margin-top: 0; }
+
 .page-head { margin-bottom: clamp(14px, 2vh, 22px); max-width: 980px; }
 .page-title { margin: 0; font-size: clamp(26px, 2.2vw, 40px); line-height: 1.15; font-weight: 700; letter-spacing: -0.015em; }
 .page-sub { margin: 10px 0 0; color: var(--text-2); max-width: 72ch; }
@@ -498,6 +579,7 @@ input[aria-invalid="true"], textarea[aria-invalid="true"], select[aria-invalid="
   box-shadow: 0 6px 20px rgba(36, 104, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.25); }
 .btn-primary:hover { background: linear-gradient(180deg, #4b91ff, #2d72f6); }
 .btn-primary .icon { fill: currentColor; stroke: none; width: 15px; height: 15px; }
+.btn-primary .icon.icon-line { fill: none; stroke: currentColor; stroke-width: 2.2; }
 .btn-secondary { background: rgba(255, 255, 255, 0.1); }
 .btn-block { width: 100%; }
 .btn-small { height: 30px; padding: 0 12px; font-size: 12.5px; }
@@ -564,7 +646,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
 .subhead { margin: 20px 0 10px; font-size: 15px; }
 
 /* ---- 12. Responsive ---------------------------------------------------------------- */
-/* Below 1200px the Simulation Parameters panel sits in the page flow (under the title). */
+/* Below 1200px the Chart Upload panel sits in the page flow (under the title). */
 @media (max-width: 1199px) {
   body.stage .workspace { padding-left: var(--page-left); }
   .view-dashboard { display: block; }
@@ -574,6 +656,9 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-sp
   .params-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 16px; align-items: end; }
   .params-form label { white-space: normal; }
   .params-form .advanced, .params-actions, .params-message { grid-column: 1 / -1; }
+  .upload-form .dropzone, .upload-form .file-name { grid-column: 1 / -1; }
+  .dropzone { min-height: 170px; }
+  .outlook-body { flex: none; }
   .params-actions { flex-direction: row; }
   .lower .panel { height: auto; }
   .dist-chart .panel-chart, .panel-chart-mc { flex: none; height: clamp(190px, 26vh, 260px); }
