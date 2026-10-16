@@ -80,6 +80,10 @@
       <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-database"/></svg>
       <span class="rail-label">Chart Data</span>
     </a>
+    <a class="rail-btn" href="#/storage" data-view="storage">
+      <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-folder"/></svg>
+      <span class="rail-label">Storage</span>
+    </a>
     <a class="rail-btn" href="#/report" data-view="report">
       <svg class="icon" aria-hidden="true"><use href="assets/icons.svg?v=3#i-file-text"/></svg>
       <span class="rail-label">Report</span>
@@ -346,6 +350,17 @@
       <div class="results" id="data-results" aria-live="polite"></div>
     </section>
 
+    <!-- ===================== STORAGE ===================== -->
+    <section class="view" id="view-storage" data-title="Storage" hidden>
+      <header class="page-head">
+        <p class="eyebrow">Library · Storage</p>
+        <h1 class="page-title">Chart <span class="accent">Storage</span></h1>
+        <p class="page-sub">Every chart you upload is saved here automatically, with its full report, so you can come back to
+          it without uploading it again.</p>
+      </header>
+      <div class="results" id="storage-results" aria-live="polite"></div>
+    </section>
+
     <!-- ===================== REPORT ===================== -->
     <section class="view" id="view-report" data-title="Report" hidden>
       <header class="page-head no-print">
@@ -437,6 +452,7 @@
   <script src="js/sections/hypothesis.js"></script>
   <script src="js/sections/regression.js"></script>
   <script src="js/sections/chart-data.js"></script>
+  <script src="js/sections/storage.js"></script>
   <script src="js/sections/report.js"></script>
   <script src="js/app.js"></script>
 </body>

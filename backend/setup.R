@@ -40,7 +40,7 @@ FXLAB_ROOT <- find_fxlab_root()
 
 local({
   modules <- c("config.R", "validation.R", "statistics.R", "historical_analysis.R", "distributions.R",
-               "hypothesis_testing.R", "regression_analysis.R", "chart_image.R", "chart_analysis.R")
+               "hypothesis_testing.R", "regression_analysis.R", "chart_image.R", "chart_storage.R", "chart_analysis.R")
   for (m in modules) source(file.path(FXLAB_ROOT, "backend", m), local = globalenv())
 })
 

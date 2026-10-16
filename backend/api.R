@@ -280,3 +280,49 @@ function(req, res) {
 function(req, res) {
   api_run(res, run_regression(parse_json_body(req)), "Regression completed")
 }
+
+# ---- Storage: a local library of every chart you have analysed --------------------------------
+#* Every chart saved in the Storage library (most recently saved first)
+#* @get /storage
+function(res) {
+  api_run(res, list(charts = chart_store_list(), max = FXLAB_CONFIG$limits$chart_store_max))
+}
+
+#* The screenshot of one saved chart
+#* @get /storage/<id>/image
+function(req, res, id) {
+  if (!chart_store_valid_id(id)) return(api_failure(res, 400L, "VALIDATION_ERROR", "Invalid chart id.", field = "id"))
+  img <- tryCatch(chart_store_image(id), fxlab_error = function(e) e)
+  if (inherits(img, "fxlab_error")) return(api_failure(res, img$status, img$code, conditionMessage(img)))
+  res$status <- 200L
+  res$setHeader("Content-Type", img$type)
+  res$setHeader("Cache-Control", "no-store")
+  res$body <- img$raw
+  res
+}
+
+#* Make a saved chart the current analysis (same response shape as POST /chart/analyze)
+#* @post /storage/<id>/load
+#* @parser fxraw
+#* @parser octet
+function(req, res, id) {
+  if (!chart_store_valid_id(id)) return(api_failure(res, 400L, "VALIDATION_ERROR", "Invalid chart id.", field = "id"))
+  api_run(res, chart_store_load(id), "Chart loaded from storage")
+}
+
+#* Remove one saved chart
+#* @post /storage/<id>/delete
+#* @parser fxraw
+#* @parser octet
+function(req, res, id) {
+  if (!chart_store_valid_id(id)) return(api_failure(res, 400L, "VALIDATION_ERROR", "Invalid chart id.", field = "id"))
+  api_run(res, list(deleted = chart_store_delete(id)), "Removed")
+}
+
+#* Remove every saved chart
+#* @post /storage/clear
+#* @parser fxraw
+#* @parser octet
+function(req, res) {
+  api_run(res, list(removed = chart_store_clear()), "Storage cleared")
+}

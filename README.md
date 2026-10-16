@@ -29,17 +29,20 @@ Browser (HTML/CSS/JS, Chart.js)  --screenshot (base64 JSON)-->  R Plumber API (b
 | **Correlation & Regression** | Scatter diagram of price against candle number with the least-squares line, Pearson r, Spearman rank correlation (1 − 6Σd²/n(n²−1)), multiple regression on t and t², regression of each return on the previous return, coefficient tables with HC1 robust errors, residual diagnostics |
 | **Chart Data** | How the chart was read (axis labels used, resolution, title, time labels), the extracted points drawn on the screenshot, closing prices with the high–low band, returns and rolling volatility, and a table of every extracted candle |
 | **Report** | The whole analysis as one document: summary and verdict, the chart and how it was read, descriptive statistics, probability, every hypothesis test with its formula, our hypothesis, regression and limitations, with the screenshot and four charts. **Download report** saves a standalone HTML file (charts and screenshot embedded, opens in any browser); **Print / Save as PDF** prints just the report (white paper layout) |
+| **Storage** | A local library of every chart you have uploaded (saved automatically — see section 6). Each card shows a thumbnail, name, interval, last price, change and verdict; **Open** makes it the current analysis again without re-uploading it, **Report** opens its report directly, and **Delete** / **Clear all** remove saved charts |
 | **About Project** | Methods, data, assumptions and limitations |
 
 **Interface.** The design follows `frontend/assets/fxlab-reference.png`: a blurred mountain-at-sunset scene,
 frosted-glass panels, a floating circular navigation rail and the **Chart Upload** panel on the dashboard.
 The rail has one icon per page (Dashboard, Distribution Analysis, Hypothesis Testing, Correlation &
-Regression, Chart Data, Report, About). Chart Upload is a fixed part of the dashboard (not a pop-up). On desktop
+Regression, Chart Data, Storage, Report, About). Chart Upload is a fixed part of the dashboard (not a pop-up). On desktop
 (1200 px and wider) it is the dashboard's left column, laid out on shared lines: its top is level with the
 first rail icon and the KPI cards (the dashboard has no title block), and its bottom with the lower panels. On tablets
 and phones it appears under the title and the rail becomes a bottom bar. No other page has input fields:
 every page shows the analysis of the uploaded chart (and explains how to upload one until you do). The
-analysis stays in the R process, so refreshing the page does not lose it; **Clear** removes it.
+analysis stays in the R process, so refreshing the page does not lose it — including the Chart Upload panel's own
+preview of the screenshot, restored from R (not just the KPIs and charts). **Clear** removes the *current*
+analysis only; the chart itself stays in the Storage library (section 6) until you delete it there.
 Charts can be downloaded as PNG and expanded to full screen. Nothing is ever presented as a live quote.
 
 ---
@@ -74,6 +77,7 @@ pns2/                          (project folder; open FXLab.Rproj)
 │   ├── statistics.R           returns, descriptive statistics, volatility, histogram/Q-Q data
 │   ├── chart_image.R          reads a chart screenshot: candles / line, price axis (OCR), legend
 │   ├── chart_analysis.R       every analysis of the extracted prices + "our hypothesis"
+│   ├── chart_storage.R        the Storage library: save / list / reload / delete saved charts
 │   ├── historical_analysis.R  CSV loading + validation, dataset state, historical summaries (bundled data)
 │   ├── distributions.R        probability distributions (API)
 │   ├── hypothesis_testing.R   tests and confidence intervals (API, and helpers reused for charts)
@@ -93,7 +97,8 @@ pns2/                          (project folder; open FXLab.Rproj)
 ├── data/
 │   ├── exchange_rates.csv     USD/INR, Date,USDINR (FRED DEXINUS, 1973-01-02 to 2026-10-09)
 │   ├── dollar_index.csv       Date,DollarIndex (FRED DTWEXBGS, 2006-01-02 to 2026-10-09)
-│   └── raw/                   untouched FRED downloads + download_log.csv (time, MD5)
+│   ├── raw/                   untouched FRED downloads + download_log.csv (time, MD5)
+│   └── charts/                the Storage library (created on first upload; not in version control)
 ├── scripts/
 │   ├── install_packages.R     installs the R packages
 │   ├── prepare_data.R         rebuilds data/*.csv from data/raw (optionally re-downloads FRED)
@@ -192,6 +197,15 @@ the original data points. If the axis cannot be read, enter the highest and lowe
 `/historical`, `/statistics`, `/hypothesis-test` and `/regression` endpoints (useful from R or the API
 explorer), but the website now analyses only the uploaded chart. No live data is ever fetched.
 
+**The Storage library.** Every chart analysed with `POST /chart/analyze` — whether from the Chart Upload
+panel or re-opened from Storage — is saved automatically by `backend/chart_storage.R` to `data/charts/`
+(created on first use, excluded from version control): the screenshot plus the exact object the endpoint
+returned, so reopening a saved chart needs no re-reading of the image. It survives restarting the backend
+(the app is single-user and local by design; see "Known limitations"). The library keeps the most recent
+`FXLAB_CONFIG$limits$chart_store_max` charts (default 60), dropping the oldest automatically. The Storage
+page lists them newest first; **Open** and **Report** make a saved chart the current analysis again
+(`POST /storage/<id>/load`) without re-uploading it, and **Delete** / **Clear all** remove them for good.
+
 ---
 
 ## 7. Statistical formulas and assumptions
@@ -284,7 +298,17 @@ image are kept in the R process for the next endpoints.
 
 ### `GET /chart/current`, `GET /chart/image`, `POST /chart/reset`
 The last analysis (`data` is `null` before the first upload), the uploaded image itself (404 before), and
-removing both.
+removing both (the chart's saved copy in Storage, if any, is not affected).
+
+### `GET /storage`, `GET /storage/<id>/image`, `POST /storage/<id>/load`, `POST /storage/<id>/delete`, `POST /storage/clear`
+The Storage library: every chart analysed with `POST /chart/analyze` is saved here automatically (see
+section 6). `GET /storage` → `data`: `charts[]` (`id`, `saved_at` ISO 8601 UTC, `name`, `interval`, `type`,
+`n_points`, `file_name`, `last_price`, `change_pct`, `verdict`, `strength`), newest first, and `max` (how
+many are kept). `GET /storage/<id>/image` serves that chart's screenshot (404 for an unknown id).
+`POST /storage/<id>/load` makes it the current analysis again — the response has the same shape as
+`POST /chart/analyze` — without re-reading the image. `POST /storage/<id>/delete` → `{"deleted": true|false}`;
+`POST /storage/clear` → `{"removed": <count>}`. An id that is not exactly `<digits>-<digits>` is rejected
+with a 400 before any file is touched.
 
 ### `POST /distribution`
 `{"distribution": "binomial", "params": {"size": 20, "prob": 0.3}, "query": {"type": "between", "a": 4, "b": 8}, "quantile_p": 0.95, "sample_size": 1000, "seed": 1}`
@@ -351,6 +375,8 @@ a <- chart_analyze_file("tests/fixtures/btc_dark_candles.png")   # or your own s
 a$hypothesis$outlook$headline; a$descriptive$returns$kurtosis
 run_hypothesis_test(list(test = "normality"))$results
 run_regression(list(model = "returns_vs_dollar_index"))$coefficients
+chart_store_list()                               # the Storage library (chart_analyze_file() does not save to it;
+                                                  # only chart_analyze_request(), used by POST /chart/analyze, does)
 ```
 
 ---
@@ -366,13 +392,14 @@ run_regression(list(model = "returns_vs_dollar_index"))$coefficients
 | File | Covers |
 |---|---|
 | `test_chart_image.R` | reading the four fixture screenshots (dark/light/dense candles, line chart): candle count, OHLC error < 0.1 %, colours, volatility within 2 %, legend title and interval; the manual price range for a chart without its axis; rejected files; every analysis against base R (test formulas, `chisq.test`, `aov`, `lm`, `cor`); the outlook's reasoning on synthetic up/down/flat paths |
+| `test_chart_storage.R` | saving on analyse, newest-first listing, image bytes match the upload, reload-as-current, delete (files removed, not just the index entry), clear, the oldest-first size cap, and id validation (path traversal rejected) |
 | `test_statistics.R` | returns, mean/median/variance/SD/quantiles against known values, moments, missing/non-finite values, zero variance, rolling volatility, histograms; reproduces the original report (n = 2,496, mean, SD, skewness, kurtosis) |
 | `test_distributions.R` | probabilities/quantiles vs R's d/p/q functions, exact discrete bounds, moments, reproducible samples, invalid parameters |
 | `test_historical.R` | CSV validation rules, bundled-data quality figures, missing file, windows, upload/reset, alignment with the dollar index |
 | `test_hypothesis.R` | t-tests vs `t.test`, CIs, JB/Shapiro-Wilk, Welch/F/Brown-Forsythe, Ljung-Box — reproducing the original report — and invalid input |
 | `test_regression.R` | OLS vs `lm`/`cor.test`, dollar-index and trend regressions vs the report, constant/mismatched/short input |
-| `test_api.R` | starts the real server: health → chart upload → current chart → image → reset; optional settings; invalid uploads (not an image, bad interval, incomplete price range, malformed JSON); the statistics endpoints; CSV upload/reset; 404; CORS; the web page; and a server with **no data files** |
-| `test_frontend.R` | headless Chrome: before an upload every page asks for a chart and no page except Chart Upload has inputs; a real file upload through the file input → the KPIs, statistics and outlook equal R's values and the overlay draws one point per extracted candle; Chart Upload is part of the dashboard only and aligned on shared lines; each rail icon opens its page (Monte Carlo is gone); every page renders without JS errors (no percentile/tail/Q-Q tables on Descriptive Statistics, one card with a formula per test on Hypothesis Testing); the Report page contains every section and test, and its downloadable file is a complete document with embedded charts; the analysis survives a refresh and Clear removes it; non-images and blank images give clear messages; phone layout; offline message. Skipped if Chrome/chromote is unavailable or unresponsive |
+| `test_api.R` | starts the real server: health → chart upload → current chart → image → reset; optional settings; invalid uploads (not an image, bad interval, incomplete price range, malformed JSON); every Storage endpoint over HTTP (list, image, load, delete, clear, invalid/missing id); the statistics endpoints; CSV upload/reset; 404; CORS; the web page; and a server with **no data files** |
+| `test_frontend.R` | headless Chrome: before an upload every page asks for a chart and no page except Chart Upload has inputs; a real file upload through the file input → the KPIs, statistics and outlook equal R's values and the overlay draws one point per extracted candle; Chart Upload is part of the dashboard only and aligned on shared lines; each rail icon opens its page (Monte Carlo is gone); every page renders without JS errors (no percentile/tail/Q-Q tables on Descriptive Statistics, one card with a formula per test on Hypothesis Testing); the Report page contains every section and test, and its downloadable file is a complete document with embedded charts; the Storage page lists saved charts newest-first and its Open / Report / Delete / Clear all actions work end to end; a **true browser reload** restores the analysis *and* the Chart Upload panel's preview thumbnail (not just the KPIs); Clear removes the current analysis but not its saved copy in Storage; non-images and blank images give clear messages; phone layout; offline message. Skipped if Chrome/chromote is unavailable or unresponsive |
 ---
 
 ## 11. Troubleshooting
@@ -402,7 +429,10 @@ run_regression(list(model = "returns_vs_dollar_index"))$coefficients
   hollow candles with very thin outlines, or heavy drawings over the candles can confuse the reader.
 * Dates are not reconstructed: candles are numbered 1…n; the time-axis labels are only shown.
 * The outlook is a statistical description under a random-walk model, not a forecast.
-* The analysis lives in the R process memory (single user, local machine); restarting the backend clears it.
+* The *current* analysis (what the Dashboard and other pages show right now) lives in the R process memory;
+  restarting the backend clears it, though it is still in Storage if it was saved. The Storage library itself
+  is a local folder (`data/charts/`), not a database: it is single-user, has no backup/sync, and a chart you
+  delete (or that ages out past the `chart_store_max` limit) cannot be recovered.
 * The background is a generated illustration, not a photograph. The glass effect needs a browser with
   `backdrop-filter` (current Chrome, Edge, Firefox, Safari); older browsers show plain translucent panels.
 * The top-right round button shows the R backend status (it is not a user account).

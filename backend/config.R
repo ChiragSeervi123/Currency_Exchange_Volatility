@@ -64,6 +64,7 @@ FXLAB_CONFIG <- list(
   # ---- Safety limits -----------------------------------------------------------------
   limits = list(
     chart_max_bytes       = 8 * 1024^2,  # uploaded screenshot (PNG or JPEG)
+    chart_store_max       = 60,          # saved charts kept in the Storage library (oldest dropped first)
     custom_max_values     = 20000,
     custom_min_values     = 2,
     dist_max_sample       = 100000,

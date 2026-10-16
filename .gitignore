@@ -17,3 +17,6 @@ tests/testthat/_snaps/
 Thumbs.db
 .DS_Store
 .vscode/
+
+# Storage library (saved chart screenshots + analyses); local only, not source
+data/charts/

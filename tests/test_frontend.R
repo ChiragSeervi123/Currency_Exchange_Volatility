@@ -28,6 +28,9 @@ browser$Runtime$exceptionThrown(callback_ = function(e) js_errors <<- c(js_error
 browser$Runtime$consoleAPICalled(callback_ = function(e) {
   if (e$type == "error") js_errors <<- c(js_errors, paste(vapply(e$args, function(a) as.character(a$value %||% a$description %||% ""), ""), collapse = " "))
 })
+# The Storage page confirms Delete / Clear all with window.confirm(); auto-accept it like a user would.
+browser$Page$enable()
+browser$Page$javascriptDialogOpening(callback_ = function(e) browser$Page$handleJavaScriptDialog(accept = TRUE))
 
 js <- function(expr) browser$Runtime$evaluate(expr, returnByValue = TRUE, awaitPromise = TRUE, timeout_ = 30)$result$value
 wait_until <- function(expr, timeout = 40) {
@@ -51,6 +54,17 @@ open_view <- function(hash, timeout = 60) {
   browser$Page$navigate(url, wait_ = FALSE)
   ok <- wait_until(sprintf("document.readyState === 'complete' && location.href === '%s' && !!(window.FX && FX.sections)", url), timeout)
   if (!ok) stop("Page did not load: ", url)
+  Sys.sleep(0.5)
+}
+
+# A genuine browser reload (unlike open_view() to a different hash: the URL then differs only in its
+# fragment, which browsers treat as same-document navigation - no reload, the page's JS keeps running).
+# This re-runs every script from scratch, so it is what actually exercises "restored from R after a
+# refresh" behaviour (FX.chart.ready() fetching GET /chart/current into a brand new JS session).
+reload_page <- function(timeout = 60) {
+  browser$Page$reload(wait_ = FALSE)
+  ok <- wait_until("document.readyState === 'complete' && !!(window.FX && FX.sections)", timeout)
+  if (!ok) stop("Page did not reload")
   Sys.sleep(0.5)
 }
 
@@ -176,10 +190,11 @@ test_that("Chart Upload is a fixed part of the dashboard, aligned on shared line
 })
 
 test_that("each rail icon opens its own section; Monte Carlo is gone", {
-  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 7)
+  expect_equal(js("document.querySelectorAll('#app-nav .rail-btn').length"), 8)
   expect_null(js("document.getElementById('view-monte-carlo')"))
   icons <- c("#/descriptive" = "view-descriptive", "#/hypothesis" = "view-hypothesis", "#/regression" = "view-regression",
-             "#/data" = "view-data", "#/report" = "view-report", "#/about" = "view-about", "#/dashboard" = "view-dashboard")
+             "#/data" = "view-data", "#/storage" = "view-storage", "#/report" = "view-report", "#/about" = "view-about",
+             "#/dashboard" = "view-dashboard")
   for (href in names(icons)) {
     click_el(sprintf('.rail-btn[href="%s"]', href))
     expect_equal(js("location.hash"), href)
@@ -231,14 +246,88 @@ test_that("the Report page shows the whole report and can be downloaded", {
   expect_length(js_errors, 0)
 })
 
-test_that("the analysis survives a page refresh, and Clear removes it", {
-  open_view("#/regression")
-  expect_equal(wait_for("reg-results"), "ok")             # fetched again from R (GET /chart/current)
+test_that("the Storage page lists saved charts and lets you open, report or delete them", {
+  api_call(server, "POST", "/storage/clear", list())      # a clean slate, whatever earlier tests left saved
+
+  open_view("#/storage")
+  expect_true(wait_until("!!document.querySelector('#storage-results .empty-chart')", 10))
+  expect_equal(js("document.querySelectorAll('.storage-card').length"), 0)
+
+  # Two charts, uploaded through the real UI, are saved automatically — newest listed first.
   open_view("#/dashboard")
+  choose_file(fixture_path("btc_dark_candles.png")); expect_true(analyze())
+  Sys.sleep(1.01)    # ids are timestamp-based; keep the save order unambiguous
+  choose_file(fixture_path("nifty_light_candles.png")); expect_true(analyze())
+
+  open_view("#/storage")
+  expect_true(wait_until("document.querySelectorAll('.storage-card').length === 2", 10))
+  names <- jsonlite::fromJSON(js("JSON.stringify(Array.prototype.map.call(document.querySelectorAll('.storage-name'), function(e){return e.textContent}))"))
+  expect_match(names[1], "^NIFTY 50")
+  expect_match(names[2], "^Bitcoin")
+  expect_equal(js("document.getElementById('storage-count').textContent"), "2 saved charts")
+  expect_match(js("document.querySelector('.storage-card .verdict-chip').textContent"), "^(Up|Down|Close to mean)$")
+  expect_match(js("document.querySelector('.storage-thumb img').src"), "/storage/.+/image")
+
+  # "Open" (on the older, Bitcoin card) makes it the current analysis again, without re-uploading it.
+  click_el(".storage-card:nth-child(2) .storage-actions .btn:nth-child(1)")
+  expect_true(wait_until("location.hash === '#/dashboard'", 10))
+  expect_true(wait_until("!!FX.chart.current() && FX.chart.current().chart.name.indexOf('Bitcoin') === 0", 10))
+  expect_match(js("document.getElementById('chart-file-name').textContent"), "loaded from the backend")
+  expect_match(js("document.getElementById('chart-preview').src"), "/chart/image")
+  expect_false(js("document.getElementById('chart-preview').hidden"))
+  expect_true(js("document.querySelector('#upload-form button[type=submit]').disabled"))   # no local file to resend
+
+  # "Report" (on the newer, NIFTY card) opens that chart's report directly.
+  open_view("#/storage")
+  expect_true(wait_until("document.querySelectorAll('.storage-card').length === 2", 10))
+  click_el(".storage-card:nth-child(1) .storage-actions .btn:nth-child(2)")
+  expect_true(wait_until("location.hash === '#/report'", 10))
+  expect_true(wait_until("!!document.querySelector('#report-results .report h1')", 20))
+  expect_match(js("document.querySelector('#report-results h1').textContent"), "NIFTY 50")
+
+  # Delete removes one card (window.confirm is auto-accepted above); Clear all empties the library.
+  open_view("#/storage")
+  expect_true(wait_until("document.querySelectorAll('.storage-card').length === 2", 10))
+  click_el(".storage-card:nth-child(2) .storage-actions .icon-btn")
+  expect_true(wait_until("document.querySelectorAll('.storage-card').length === 1", 10))
+  expect_equal(js("document.getElementById('storage-count').textContent"), "1 saved chart")
+  click_el("#storage-clear")
+  expect_true(wait_until("!!document.querySelector('#storage-results .empty-chart')", 10))
+  expect_equal(api_call(server, "GET", "/storage")$json$data$charts, list())
+  expect_length(js_errors, 0)
+})
+
+test_that("the analysis survives a true browser reload (including its preview thumbnail)", {
+  open_view("#/dashboard")
+  choose_file(fixture_path("btc_dark_candles.png"))
+  expect_true(analyze())
+  expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent !== '—'", 10))
+
+  reload_page()                                            # a brand new JS session; fetched from R (GET /chart/current)
+  expect_equal(js("location.hash"), "#/dashboard")
   expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent !== '—'", 20))
+  # The Chart Upload panel shows the restored chart's screenshot too, not an empty dropzone (the bug this guards against).
+  expect_false(js("document.getElementById('chart-preview').hidden"))
+  expect_match(js("document.getElementById('chart-preview').src"), "/chart/image")
+  expect_true(js("document.getElementById('dropzone').classList.contains('has-file')"))
+  expect_match(js("document.getElementById('chart-file-name').textContent"), "loaded from the backend")
+  expect_true(js("document.querySelector('#upload-form button[type=submit]').disabled"))  # no local file to resend
+
+  # A page that was not visible at the time of the reload restores from R just the same.
+  open_view("#/regression")
+  expect_equal(wait_for("reg-results"), "ok")
+  reload_page()
+  expect_equal(wait_for("reg-results"), "ok")
+})
+
+test_that("Clear removes the current analysis (but not the chart's saved copy in Storage)", {
+  open_view("#/dashboard")
+  expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent !== '—'", 10))
   click_el("#upload-form [data-action=clear]")
   expect_true(wait_until("document.querySelector('#kpi-last [data-kpi=value]').textContent === '—'", 10))
+  expect_true(js("document.getElementById('chart-preview').hidden"))
   expect_null(api_call(server, "GET", "/chart/current")$json$data)
+  expect_gte(length(api_call(server, "GET", "/storage")$json$data$charts), 1)
 })
 
 test_that("files that are not charts give a clear message", {

@@ -87,6 +87,48 @@ test_that("invalid chart uploads are rejected with a clear error naming the fiel
   expect_equal(api_call(server, "POST", "/simulate", list(start_rate = 85))$status, 404)   # removed
 })
 
+test_that("every analysed chart is kept in the Storage library, over HTTP", {
+  api_call(server, "POST", "/storage/clear", list())           # a clean slate, whatever earlier tests left behind
+
+  a1 <- api_call(server, "POST", "/chart/analyze", list(image_base64 = fixture_b64("btc_dark_candles.png"), file_name = "btc.png"))
+  expect_equal(a1$status, 200)
+  Sys.sleep(1.01)                                               # ids are timestamp-based; keep save order unambiguous
+  a2 <- api_call(server, "POST", "/chart/analyze", list(image_base64 = fixture_b64("nifty_light_candles.png"), file_name = "nifty.png"))
+  expect_equal(a2$status, 200)
+
+  lst <- api_call(server, "GET", "/storage")
+  expect_equal(lst$status, 200)
+  expect_length(lst$json$data$charts, 2)
+  expect_equal(lst$json$data$charts[[1]]$file_name, "nifty.png")    # most recently saved first
+  id_new <- lst$json$data$charts[[1]]$id
+  id_old <- lst$json$data$charts[[2]]$id
+
+  img <- curl::curl_fetch_memory(paste0(server$url, "/storage/", id_old, "/image"))
+  expect_equal(img$status_code, 200)
+  f <- file.path(FXLAB_ROOT, "tests", "fixtures", "btc_dark_candles.png")
+  expect_identical(img$content, readBin(f, "raw", file.size(f)))
+
+  bad <- api_call(server, "GET", "/storage/not-a-real-id/image")
+  expect_equal(bad$status, 400); expect_equal(bad$json$error$field, "id")
+  missing <- api_call(server, "GET", "/storage/99999999999999-999/image")
+  expect_equal(missing$status, 404); expect_equal(missing$json$error$code, "NOT_FOUND")
+
+  loaded <- api_call(server, "POST", paste0("/storage/", id_old, "/load"), list())
+  expect_equal(loaded$status, 200)
+  expect_equal(loaded$json$data$chart$file_name, "btc.png")
+  current <- api_call(server, "GET", "/chart/current")
+  expect_equal(current$json$data$chart$file_name, "btc.png")        # reloading changes the current chart too
+
+  del <- api_call(server, "POST", paste0("/storage/", id_old, "/delete"), list())
+  expect_equal(del$status, 200); expect_true(del$json$data$deleted)
+  expect_length(api_call(server, "GET", "/storage")$json$data$charts, 1)
+  expect_false(api_call(server, "POST", paste0("/storage/", id_old, "/delete"), list())$json$data$deleted)
+
+  clr <- api_call(server, "POST", "/storage/clear", list())
+  expect_equal(clr$status, 200); expect_equal(clr$json$data$removed, 1)
+  expect_length(api_call(server, "GET", "/storage")$json$data$charts, 0)
+})
+
 test_that("statistical endpoints return structured results", {
   st <- api_call(server, "POST", "/statistics", list(source = "historical", variable = "log_return",
                                                      start_date = "2016-01-01", end_date = "2025-12-31"))

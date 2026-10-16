@@ -589,8 +589,10 @@ chart_analyze_request <- function(body) {
     manual <- list(high = hi, low = lo)
   }
   out <- chart_analyze_raw(raw, chart_name, interval, file_name, manual)
+  img_type <- if (identical(raw[1:3], as.raw(c(0xff, 0xd8, 0xff)))) "image/jpeg" else "image/png"
   .fx_state$chart <- out
-  .fx_state$chart_image <- list(raw = raw, type = if (identical(raw[1:3], as.raw(c(0xff, 0xd8, 0xff)))) "image/jpeg" else "image/png")
+  .fx_state$chart_image <- list(raw = raw, type = img_type)
+  chart_store_save(raw, img_type, out)        # kept in the Storage library; never blocks this response
   out
 }
 

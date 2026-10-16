@@ -143,12 +143,26 @@
   });
 
   // ---- The shared analysis ------------------------------------------------------------------
-  function set(data) {
+  // opts.restored: true when this analysis came back from R (GET /chart/current) rather than from
+  // a file just chosen here — e.g. after a page refresh. There is then no local File to preview
+  // from, so the dropzone shows the image R still has (GET /chart/image) instead of staying empty.
+  function set(data, opts) {
     analysis = data;
     version += 1;
     FX.dataVersion += 1;
     updatePill();
+    if (data && opts && opts.restored) showRestoredPreview(data);
     listeners.forEach(function (fn) { fn(data); });
+  }
+
+  function showRestoredPreview(data) {
+    selected = null;                 // no local File to re-send; choose a new one to analyze again
+    if (preview.src) URL.revokeObjectURL(preview.src);
+    preview.src = FX.config.apiBase + '/chart/image?v=' + version;
+    preview.hidden = false;
+    dropzone.classList.add('has-file');
+    fileLabel.textContent = (data.chart.file_name || 'Previously uploaded image') + ' · loaded from the backend';
+    submit.disabled = true;
   }
 
   function updatePill() {
@@ -177,7 +191,7 @@
   function ready() {
     if (!readyPromise) {
       readyPromise = FX.api.get('/chart/current')
-        .then(function (data) { if (data && !analysis) set(data); })
+        .then(function (data) { if (data && !analysis) set(data, { restored: true }); })
         .catch(function () { readyPromise = null; });
     }
     return readyPromise || Promise.resolve();
@@ -217,6 +231,15 @@
     ]);
   }
 
+  // Make a chart from the Storage library the current analysis (POST /storage/<id>/load), exactly
+  // as if it had just been analysed. Used by the Storage page's "Open" and "Report" actions.
+  function loadFromStorage(id) {
+    return FX.api.post('/storage/' + encodeURIComponent(id) + '/load', {}).then(function (data) {
+      set(data, { restored: true });
+      return data;
+    });
+  }
+
   FX.chart = {
     current: function () { return analysis; },
     version: function () { return version; },
@@ -225,6 +248,7 @@
     renderInto: renderInto,
     analyze: analyze,
     choose: choose,                 // used by the browser tests
-    isBusy: function () { return busy; }
+    isBusy: function () { return busy; },
+    loadFromStorage: loadFromStorage
   };
 })();

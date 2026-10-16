@@ -522,6 +522,29 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 .test-card .chart-note { color: var(--text-2); font-size: 12px; margin: 0 0 8px; }
 .chart-box-sm { height: 170px; margin-top: auto; }
 .outlook-panel { margin-top: 18px; padding: 16px; }
+
+/* A small pill version of the verdict colours (.verdict-up/down/sideways above), for the Storage gallery. */
+.verdict-chip { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 999px; border: 1px solid;
+  font-size: 10.5px; font-weight: 650; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text); white-space: nowrap; }
+
+/* ---- Storage page: a gallery of every chart you have uploaded ------------------------------ */
+.storage-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.storage-count { color: var(--text-2); font-size: 13px; }
+.storage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.storage-card { display: flex; flex-direction: column; min-width: 0; background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: var(--radius); overflow: hidden; -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+.storage-thumb { position: relative; height: 140px; background: rgba(8, 15, 32, 0.55); }
+.storage-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.storage-body { padding: 12px 14px 2px; flex: 1; min-width: 0; }
+.storage-name { margin: 0 0 3px; font-weight: 650; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.storage-meta { margin: 0 0 9px; font-size: 11.5px; color: var(--text-2); }
+.storage-stats { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 4px; }
+.storage-price { font-weight: 650; font-size: 13px; font-variant-numeric: tabular-nums; }
+.storage-change { font-size: 12px; font-weight: 600; }
+.storage-change.is-up { color: var(--good); }
+.storage-change.is-down { color: var(--bad); }
+.storage-actions { display: flex; align-items: center; gap: 6px; padding: 10px 14px 14px; }
+.storage-actions .btn-small { flex: 1; }
 .insight-lists .subhead:first-child { margin-top: 0; }
 
 .page-head { margin-bottom: clamp(14px, 2vh, 22px); max-width: 980px; }
