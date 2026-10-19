@@ -78,7 +78,7 @@
     var title = c.name + (c.interval && c.name.indexOf(c.interval) < 0 ? ' · ' + c.interval : '');
 
     root.appendChild(el('header', { class: 'rp-cover' }, [
-      p('FXLab · Probability & Statistics report', 'rp-kicker'),
+      p('Chart Reader · Probability & Statistics report', 'rp-kicker'),
       el('h1', { text: 'Statistical analysis of ' + title }),
       p('Generated ' + c.analysed_at + ' from ' + (c.file_name || 'an uploaded chart screenshot') + '. All calculations were performed in R on prices read from the image.', 'rp-muted')
     ]));
@@ -193,7 +193,7 @@
       '"Fail to reject H₀" does not prove that H₀ is true.',
       out.caveat
     ].map(function (t) { return el('li', { text: t }); })));
-    root.appendChild(p('Report produced by FXLab (R, Plumber, Tesseract OCR). Nothing in this report is a live quote or investment advice.', 'rp-muted rp-foot'));
+    root.appendChild(p('Report produced by Chart Reader (R, Plumber, Tesseract OCR). Nothing in this report is a live quote or investment advice.', 'rp-muted rp-foot'));
 
     // charts that need the elements to be in the page first
     priceChart(a);
@@ -227,7 +227,7 @@
       shot ? fetch(FX.config.apiBase + '/chart/image?v=' + FX.chart.version()).then(function (r) { return r.blob(); }).then(blobToDataUrl) : null
     ]).then(function (parts) {
       if (shot && parts[1]) shot.src = parts[1];
-      var title = 'FXLab report - ' + a.chart.name;
+      var title = 'Chart Reader report - ' + a.chart.name;
       return '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
         '<title>' + title.replace(/</g, '&lt;') + '</title><style>body{margin:0;padding:16px;background:#0b1224}@media print{body{padding:0;background:#fff}}\n' +
         parts[0] + '</style></head><body>' + clone.outerHTML + '</body></html>';
@@ -245,7 +245,7 @@
       var slug = String(a.chart.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'chart';
       var url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
       var link = document.createElement('a');
-      link.href = url; link.download = 'fxlab-report-' + slug + '-' + new Date().toISOString().slice(0, 10) + '.html';
+      link.href = url; link.download = 'chart-reader-report-' + slug + '-' + new Date().toISOString().slice(0, 10) + '.html';
       document.body.appendChild(link); link.click(); link.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
     }).catch(function (err) {

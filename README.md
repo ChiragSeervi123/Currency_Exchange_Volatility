@@ -1,6 +1,6 @@
-# FXLab — Currency Exchange Rate and Volatility Analysis Using R
+# Chart Reader — Probability & Statistics of Uploaded Graphs Using R
 
-FXLab is a Probability and Statistics project with a working web application. You **upload a screenshot
+Chart Reader is a Probability and Statistics project with a working web application: a **graph reader**. You **upload a screenshot
 of a price chart** (for example USD/INR, Nifty 50 or Bitcoin from TradingView) in the Chart Upload panel;
 the **R backend** (an R Plumber API) reads the candles and the price axis from the image and then applies
 every syllabus topic to that price series — descriptive statistics, probability and distributions,
@@ -128,7 +128,7 @@ pns2/                          (project folder; open FXLab.Rproj)
 
 ---
 
-## 5. Running FXLab
+## 5. Running Chart Reader
 
 The R backend serves both the API and the web page, so **one process is enough**.
 
@@ -411,7 +411,7 @@ chart_store_list()                               # the Storage library (chart_an
 | "The price axis labels could not be read" | Upload a screenshot that includes the price axis, or enter the highest and lowest price in *Optional settings*. |
 | "No candles or price line were found" | Upload a candlestick, line or area chart; very faint or custom colours may not be recognised. |
 | Points in the Chart Data overlay are off the candles | Crop away pop-ups and drawings over the chart, keep the default candle colours, and upload a larger screenshot. |
-| `Could not find the FXLab project folder` | Open `FXLab.Rproj` in RStudio, or run the command from the folder containing it. |
+| `Could not find the Chart Reader project folder` | Open `FXLab.Rproj` in RStudio, or run the command from the folder containing it. |
 | Port 8000 already in use | Stop the other program, or set `FXLAB_PORT=8001` and open `http://127.0.0.1:8001/`. |
 | Page opened from disk shows a red banner | Open `http://127.0.0.1:8000/` instead of double-clicking `index.html`. |
 | "USD/INR data NOT AVAILABLE" | Restore `data/exchange_rates.csv` (run `scripts/prepare_data.R`) or upload a CSV. |
@@ -445,6 +445,6 @@ chart_store_list()                               # the Storage library (chart_an
 
 The earlier report-oriented analysis lives in
 `C:\Projects\Pns Project\Currency_Exchange_Volatility_Project` (scripts `R/00`–`08`, report and viva notes)
-and was **not modified**. FXLab includes its FRED data (still served by the API) and ports its tested helpers (Newey-West test,
-Brown-Forsythe test, HC1 standard errors, Breusch-Pagan, Durbin-Watson). The test suite checks that FXLab
+and was **not modified**. Chart Reader includes its FRED data (still served by the API) and ports its tested helpers (Newey-West test,
+Brown-Forsythe test, HC1 standard errors, Breusch-Pagan, Durbin-Watson). The test suite checks that Chart Reader
 reproduces that report's key numbers for 2016–2025.

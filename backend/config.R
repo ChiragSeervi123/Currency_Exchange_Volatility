@@ -1,7 +1,7 @@
 # =============================================================================
 # config.R
 # -----------------------------------------------------------------------------
-# Purpose : Every setting FXLab uses lives here: server address, data files,
+# Purpose : Every setting Chart Reader uses lives here: server address, data files,
 #           statistical conventions, and the safety limits that stop a request
 #           from exhausting memory. Change a value here, not inside the modules.
 # Note    : Server address and port can also be set with the environment
@@ -9,8 +9,8 @@
 # =============================================================================
 
 FXLAB_CONFIG <- list(
-  app_name    = "FXLab",
-  app_title   = "Currency Exchange Rate and Volatility Analysis Using R",
+  app_name    = "Chart Reader",
+  app_title   = "Probability & Statistics of Uploaded Graphs Using R",
   api_version = "1.0.0",
 
   # ---- Server ---------------------------------------------------------------

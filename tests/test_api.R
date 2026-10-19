@@ -196,7 +196,7 @@ test_that("unknown routes, CORS and the web interface behave correctly", {
   expect_null(foreign$headers[["access-control-allow-origin"]])
   page <- api_call(server, "GET", "/app/")
   expect_equal(page$status, 200)
-  expect_match(page$text, "<title>FXLab")
+  expect_match(page$text, "<title>Chart Reader")
   expect_equal(api_call(server, "GET", "/app/js/api.js")$status, 200)
   root <- curl::curl_fetch_memory(paste0(server$url, "/"), handle = curl::new_handle(followlocation = FALSE))
   expect_equal(root$status_code, 302)

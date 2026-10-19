@@ -207,7 +207,7 @@ load_datasets <- function(root = FXLAB_ROOT) {
                                           series, basename(path)),
       fxlab_error = function(e) {
         .fx_state[[paste0(series, "_error")]] <- e
-        message("[FXLab] ", series, " data not loaded: ", conditionMessage(e))
+        message("[Chart Reader] ", series, " data not loaded: ", conditionMessage(e))
       }
     )
   }

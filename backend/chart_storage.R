@@ -75,7 +75,7 @@ chart_store_save <- function(raw, content_type, analysis) {
     chart_store_write_index(idx)
     entry
   }, error = function(e) {
-    message("[FXLab] Could not save the chart to storage: ", conditionMessage(e))
+    message("[Chart Reader] Could not save the chart to storage: ", conditionMessage(e))
     NULL
   })
 }

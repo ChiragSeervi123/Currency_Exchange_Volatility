@@ -50,7 +50,7 @@
     try {
       payload = await response.json();
     } catch (e) {
-      throw new ApiError('The server answered with something that is not FXLab JSON (HTTP ' + response.status + ').',
+      throw new ApiError('The server answered with something that is not Chart Reader JSON (HTTP ' + response.status + ').',
         { status: response.status, code: 'BAD_RESPONSE' });
     }
     FX.status && FX.status.markOnline();

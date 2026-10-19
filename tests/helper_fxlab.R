@@ -1,6 +1,6 @@
 # =============================================================================
 # helper_fxlab.R - loaded automatically by testthat before the test files.
-# Loads the FXLab modules and provides helpers to start the API in a
+# Loads the Chart Reader modules and provides helpers to start the API in a
 # background R process and call it over HTTP.
 # =============================================================================
 
@@ -38,7 +38,7 @@ start_fxlab_server <- function(root = Sys.getenv("FXLAB_ROOT"), port = httpuv::r
     if (up) break
     if (!proc$is_alive() || Sys.time() > deadline) {
       proc$kill()
-      stop("The FXLab server did not start:\n", paste(readLines(log, warn = FALSE), collapse = "\n"))
+      stop("The Chart Reader server did not start:\n", paste(readLines(log, warn = FALSE), collapse = "\n"))
     }
     Sys.sleep(0.25)
   }

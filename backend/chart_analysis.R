@@ -1,7 +1,7 @@
 # =============================================================================
 # chart_analysis.R
 # -----------------------------------------------------------------------------
-# Purpose : Everything FXLab shows about an uploaded chart, computed in R from the
+# Purpose : Everything Chart Reader shows about an uploaded chart, computed in R from the
 #           price series read out of the image (backend/chart_image.R). The
 #           sections follow the Probability & Statistics syllabus:
 #

@@ -32,7 +32,7 @@ find_fxlab_root <- function() {
       dir <- parent
     }
   }
-  stop("Could not find the FXLab project folder. Open FXLab.Rproj in RStudio, or run the command ",
+  stop("Could not find the Chart Reader project folder. Open FXLab.Rproj in RStudio, or run the command ",
        "from the project folder (the one that contains FXLab.Rproj).", call. = FALSE)
 }
 

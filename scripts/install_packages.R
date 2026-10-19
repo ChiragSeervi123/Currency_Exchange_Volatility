@@ -1,5 +1,5 @@
 # =============================================================================
-# install_packages.R - install the R packages FXLab uses (run once).
+# install_packages.R - install the R packages Chart Reader uses (run once).
 #   "C:\Program Files\R\R-4.6.1\bin\Rscript.exe" scripts/install_packages.R
 #
 # Required to run the app : plumber (brings jsonlite, httpuv, ...), png and jpeg (read screenshots),

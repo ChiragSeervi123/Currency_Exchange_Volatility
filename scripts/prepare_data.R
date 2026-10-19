@@ -1,7 +1,7 @@
 # =============================================================================
 # prepare_data.R
 # -----------------------------------------------------------------------------
-# Purpose : Build the two CSV files FXLab reads from the untouched FRED
+# Purpose : Build the two CSV files Chart Reader reads from the untouched FRED
 #           downloads in data/raw/ (copied from the original project, see
 #           data/raw/download_log.csv for retrieval time and MD5 checksums).
 #
@@ -18,7 +18,7 @@
 
 REFRESH_FROM_FRED <- FALSE
 
-if (!file.exists("FXLab.Rproj")) stop("Run this script from the FXLab project folder.", call. = FALSE)
+if (!file.exists("FXLab.Rproj")) stop("Run this script from the Chart Reader project folder.", call. = FALSE)
 
 series <- list(
   list(id = "DEXINUS",  out = file.path("data", "exchange_rates.csv"), value_name = "USDINR"),

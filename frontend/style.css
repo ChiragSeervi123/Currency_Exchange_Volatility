@@ -1,5 +1,5 @@
 /* =============================================================================
-   FXLab - "glass over mountains" theme, recreating the reference design
+   Chart Reader - "glass over mountains" theme, recreating the reference design
    (frontend/assets/fxlab-reference.png).
    Structure: 1 tokens · 2 base · 3 background · 4 top bar · 5 rail · 6 simulation parameters
    · 7 workspace & hero · 8 KPI cards · 9 panels & charts · 10 analysis pages
@@ -561,6 +561,53 @@ body:not(.stage) .workspace { padding-top: calc(var(--top-pad) + clamp(18px, 3vh
 .prose p { color: var(--text-2); }
 .about-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 14px; }
 .about-grid .panel { margin: 0; }
+.about-grid .about-team { grid-column: 1 / -1; }
+
+/* Team cards (About page and splash.html). Each avatar ring is a three-segment donut: one
+   segment per team member, this member's segment highlighted. */
+.team-batch { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.team-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 12px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 600; color: var(--text-2); background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border); }
+.team-tag-accent { color: #fff; background: var(--accent-soft); border-color: rgba(91, 155, 255, 0.55); }
+.team-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; perspective: 1100px; }
+.team-card {
+  position: relative; overflow: hidden; margin: 0; padding: 16px 20px 22px; text-align: center;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transform-style: preserve-3d;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.team-card:hover { border-color: rgba(91, 155, 255, 0.5);
+  box-shadow: var(--shadow), 0 22px 50px rgba(36, 104, 240, 0.28); }
+.team-chart { display: block; width: 100%; height: 62px; margin-bottom: -10px; overflow: visible; }
+.team-area { fill: var(--series-1-softer); }
+.team-line { fill: none; stroke: var(--series-1); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 1.6s ease 0.25s; }
+.team-reg { stroke: var(--warn); }
+.team-mean { stroke: var(--series-2); stroke-width: 1.4; stroke-dasharray: 4 4; }
+.team-candles line { stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.4; }
+.team-candles rect { rx: 1.5; }
+.team-candles .up { fill: var(--good); }
+.team-candles .down { fill: var(--bad); }
+.team-dots circle { fill: var(--violet); }
+.team-avatar { position: relative; display: grid; place-items: center; width: 86px; height: 86px; margin: 0 auto 10px;
+  transform: translateZ(28px); }
+.team-avatar > span { display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%;
+  font-size: 20px; font-weight: 700; letter-spacing: 0.02em; color: #fff;
+  background: linear-gradient(145deg, #3a86ff, #7c5cff); box-shadow: 0 8px 24px rgba(36, 104, 240, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+.team-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-seg { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 4; stroke-linecap: round;
+  stroke-dasharray: 27.3 72.7; transition: stroke-dasharray 1.1s ease 0.3s; }
+.ring-seg.s2 { stroke-dashoffset: -33.333; }
+.ring-seg.s3 { stroke-dashoffset: -66.667; }
+.m1 .s1 { stroke: var(--series-1); } .m2 .s2 { stroke: var(--good); } .m3 .s3 { stroke: var(--violet); }
+.team-index { margin: 0; font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--eyebrow); }
+.team-name { margin: 4px 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+.team-meta { margin: 0; font-size: 12.5px; color: var(--muted); }
+.team-glare { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.35s ease;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 0%), rgba(255, 255, 255, 0.16), transparent 58%); }
+.team-card:hover .team-glare { opacity: 1; }
+/* Before a card scrolls into view on the splash page its charts are undrawn. */
+.reveal:not(.is-in) .team-line { stroke-dashoffset: 1; }
+.reveal:not(.is-in) .ring-seg { stroke-dasharray: 0 100; }
 
 /* ---- 11. Shared components: forms, buttons, results ---------------------------------- */
 .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px 16px; align-items: start; }

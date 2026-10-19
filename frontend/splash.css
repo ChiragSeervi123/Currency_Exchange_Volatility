@@ -1,0 +1,147 @@
+/* =============================================================================
+   splash.html - the 3D welcome page. Uses the tokens, fonts, glass, buttons, brand
+   and team cards of style.css; this file only adds the splash layout.
+   Structure: 1 scene layer · 2 hero · 3 syllabus dock · 4 sections · 5 footer
+   · 6 motion · 7 responsive.
+   ============================================================================= */
+
+/* ---- 1. Scene layer --------------------------------------------------------- */
+body.splash { overflow-x: hidden; }
+.splash-canvas {
+  position: fixed; inset: 0; z-index: -1;
+  width: 100vw; height: 100vh; display: block;
+  cursor: grab; touch-action: pan-y;               /* vertical swipes still scroll the page on phones */
+  transition: opacity 0.2s linear, filter 0.2s linear;
+}
+.splash-canvas.is-dragging { cursor: grabbing; }
+.no-webgl .splash-canvas { display: none; }
+.splash-tooltip {
+  position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none;
+  max-width: 260px; padding: 8px 11px; font-size: 12.5px; line-height: 1.45; color: var(--text);
+  background: var(--glass-strong); border-radius: var(--radius-sm);
+  transform: translate(-9999px, 0);
+}
+.splash-tooltip b { display: block; font-weight: 650; color: #fff; }
+
+.splash-status { cursor: default; }
+.splash-status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08); }
+.splash-status.is-online .splash-status-dot { background: var(--good); box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.22); }
+.splash-status.is-offline .splash-status-dot { background: #ef4444; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.22); }
+
+/* ---- 2. Hero ------------------------------------------------------------------ */
+/* The hero lets pointer events fall through to the canvas behind it; only its controls catch them. */
+.splash-hero {
+  position: relative; min-height: 100vh; min-height: 100svh;
+  padding: var(--top-pad) var(--page-right) 72px clamp(16px, 4vw, 72px);
+  pointer-events: none;
+}
+.hero-copy { display: flex; flex-direction: column; gap: 14px; max-width: min(540px, 42vw); }
+.hero-copy > * { pointer-events: auto; margin: 0; }
+.hero-title {
+  font-size: clamp(34px, 3.9vw, 58px); line-height: 1.04; font-weight: 750; letter-spacing: -0.025em;
+  text-shadow: 0 2px 24px rgba(5, 10, 25, 0.55);
+}
+.hero-r {
+  display: inline-grid; place-items: center; width: 1.12em; height: 1.12em; border-radius: 0.24em;
+  font-size: 0.82em; vertical-align: 0.06em; color: #fff;
+  background: linear-gradient(145deg, #3a86ff, #7c5cff); box-shadow: 0 8px 26px rgba(36, 104, 240, 0.5);
+}
+.hero-sub { font-size: clamp(14px, 1.05vw, 16.5px); line-height: 1.6; color: var(--text-2); text-shadow: 0 1px 10px rgba(5, 10, 25, 0.6); }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.hero-hint { font-size: 12px; color: var(--muted); text-shadow: 0 1px 8px rgba(5, 10, 25, 0.7); }
+.scroll-cue {
+  position: absolute; left: 50%; bottom: 22px; width: 26px; height: 42px; margin-left: -13px;
+  border: 2px solid rgba(255, 255, 255, 0.5); border-radius: 14px; pointer-events: auto;
+}
+.scroll-cue span { position: absolute; left: 50%; top: 8px; width: 4px; height: 8px; margin-left: -2px; border-radius: 2px;
+  background: #fff; animation: cue 1.8s ease-in-out infinite; }
+@keyframes cue { 0% { transform: translateY(0); opacity: 1; } 70% { transform: translateY(14px); opacity: 0; } 100% { opacity: 0; } }
+
+/* ---- 3. Syllabus dock ----------------------------------------------------------- */
+.mode-dock { padding: 12px; margin-top: 6px !important; }
+.mode-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mode-chip {
+  position: relative; overflow: hidden;
+  display: inline-flex; align-items: center; gap: 7px; height: 32px; padding: 0 11px 0 6px;
+  font: 600 12.5px var(--font); color: var(--text-2);
+  background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glass-border); border-radius: 999px; cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.mode-chip span { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px;
+  background: rgba(255, 255, 255, 0.12); }
+.mode-chip:hover { color: #fff; background: rgba(255, 255, 255, 0.14); }
+.mode-chip[aria-pressed="true"] { color: #fff; background: var(--accent-soft); border-color: rgba(91, 155, 255, 0.65); }
+.mode-chip[aria-pressed="true"] span { background: var(--accent); }
+/* progress of the automatic tour on the active chip */
+.mode-chip i { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--accent-2); }
+.touring .mode-chip[aria-pressed="true"] i { animation: chip-progress var(--tour-ms, 8000ms) linear forwards; }
+@keyframes chip-progress { to { width: 100%; } }
+
+.mode-caption { padding: 12px 4px 4px; min-height: 172px; }
+.mode-caption > * { margin: 0; }
+.mode-unit { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--eyebrow); }
+.mode-title { margin-top: 2px; font-size: 19px; font-weight: 700; }
+.mode-text { margin-top: 4px; font-size: 13.5px; color: var(--text-2); }
+.mode-formula { margin-top: 8px; padding: 7px 10px; font: 500 13px/1.4 "Cambria Math", "Times New Roman", serif; color: #e6edff;
+  background: var(--glass-inner); border: 1px solid var(--glass-border); border-radius: 8px; }
+.mode-formula:empty { display: none; }
+.mode-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-top: 10px; font-size: 12.5px; color: var(--text-2); }
+.mode-controls:empty { display: none; }
+.mode-controls label { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center; flex: 1 1 180px; }
+.mode-controls label output { font-variant-numeric: tabular-nums; color: #fff; font-weight: 600; text-align: right; }
+.mode-controls input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.mode-seg { display: inline-flex; padding: 2px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--glass-border); }
+.mode-seg button { height: 26px; padding: 0 10px; font: 600 12px var(--font); color: var(--text-2); background: none; border: 0; border-radius: 999px; cursor: pointer; }
+.mode-seg button[aria-pressed="true"] { color: #fff; background: var(--accent); }
+.mode-decision { flex-basis: 100%; padding: 6px 10px; border-radius: 8px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mode-decision.accept { color: var(--good); background: var(--good-bg); border: 1px solid var(--good-border); }
+.mode-decision.reject { color: var(--bad); background: var(--bad-bg); border: 1px solid var(--bad-border); }
+.mode-foot { display: flex; justify-content: space-between; gap: 8px; padding-top: 10px; margin-top: 8px; border-top: 1px solid var(--glass-border); }
+.mode-zoom { display: inline-flex; gap: 6px; }
+.mode-zoom .btn { min-width: 32px; padding: 0 9px; font-size: 15px; }
+
+/* ---- 4. Sections ------------------------------------------------------------------ */
+.splash-section { position: relative; max-width: 1180px; margin: 0 auto; padding: clamp(56px, 9vh, 110px) clamp(16px, 4vw, 48px); }
+.section-head { margin-bottom: 26px; }
+.section-head > * { margin: 0; }
+.section-title { margin-top: 4px; font-size: clamp(28px, 3vw, 44px); font-weight: 750; letter-spacing: -0.02em; line-height: 1.1;
+  text-shadow: 0 2px 20px rgba(5, 10, 25, 0.5); }
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 0; padding: 0; list-style: none; counter-reset: none; }
+.step { position: relative; padding: 18px 18px 20px; }
+.step h3 { margin: 12px 0 6px; font-size: 16.5px; }
+.step p { margin: 0; color: var(--text-2); font-size: 13.5px; }
+.step-no { position: absolute; right: 16px; top: 12px; font-size: 30px; font-weight: 800; color: rgba(255, 255, 255, 0.1); }
+.step-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 11px; color: #fff;
+  background: linear-gradient(145deg, #3a86ff, #2468f0); box-shadow: 0 6px 18px rgba(36, 104, 240, 0.45); }
+.splash-team .team-grid { gap: 20px; }
+.splash-team .team-card { padding: 20px 22px 26px; }
+
+/* ---- 5. Footer ---------------------------------------------------------------------- */
+.splash-footer { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 20px 16px 48px; text-align: center; }
+.splash-footer p { margin: 0; max-width: 640px; font-size: 12.5px; color: var(--muted); }
+
+/* ---- 6. Motion --------------------------------------------------------------------------- */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.reveal.is-in { opacity: 1; transform: none; }
+.team-card.reveal.is-in { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+.hero-copy .reveal:nth-child(2) { transition-delay: 0.08s; }
+.hero-copy .reveal:nth-child(3) { transition-delay: 0.16s; }
+.hero-copy .reveal:nth-child(4) { transition-delay: 0.24s; }
+.hero-copy .reveal:nth-child(5) { transition-delay: 0.32s; }
+.steps .reveal:nth-child(2), .team-grid .reveal:nth-child(2) { transition-delay: 0.1s; }
+.steps .reveal:nth-child(3), .team-grid .reveal:nth-child(3) { transition-delay: 0.2s; }
+.steps .reveal:nth-child(4) { transition-delay: 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ---- 7. Responsive ------------------------------------------------------------------------- */
+@media (max-width: 899px) {
+  .splash-hero { padding: calc(var(--top-pad) + 4px) 16px 72px; }
+  .hero-copy { max-width: none; }
+  /* on phones the scene sits behind the copy, so give the copy a little more contrast */
+  .hero-title { font-size: clamp(32px, 9vw, 44px); }
+  .mode-dock { background: var(--glass-strong); margin-top: 36vh !important; }   /* leaves room to see the scene */
+  .splash-status #backend-label { display: none; }
+  .splash-status { padding: 0 12px; }
+}

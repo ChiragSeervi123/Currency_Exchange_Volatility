@@ -112,7 +112,7 @@
     });
     document.body.classList.toggle('stage', name === 'dashboard');
     var view = document.getElementById('view-' + name);
-    document.title = 'FXLab · ' + view.dataset.title;
+    document.title = 'Chart Reader · ' + view.dataset.title;
     if (current !== null && current !== name) document.getElementById('main').focus({ preventScroll: true });
     current = name;
     window.scrollTo(0, 0);

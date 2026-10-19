@@ -1,7 +1,7 @@
 # =============================================================================
 # main.R  -  START HERE
 # -----------------------------------------------------------------------------
-# Starts the FXLab R backend: the Plumber API and the web interface.
+# Starts the Chart Reader R backend: the Plumber API and the web interface.
 #
 #   RStudio : open FXLab.Rproj, open backend/main.R and click "Source".
 #   Terminal: from the project folder run
@@ -46,7 +46,7 @@ if (isTRUE(FXLAB_CONFIG$serve_frontend) && dir.exists(frontend_dir)) {
 
 app_url <- sprintf("http://%s:%d/", FXLAB_CONFIG$host, FXLAB_CONFIG$port)
 message("\n==============================================================")
-message(" FXLab - ", FXLAB_CONFIG$app_title)
+message(" Chart Reader - ", FXLAB_CONFIG$app_title)
 message(" Web interface : ", app_url)
 message(" API health    : ", app_url, "health")
 message(" API explorer  : ", app_url, "__docs__/")

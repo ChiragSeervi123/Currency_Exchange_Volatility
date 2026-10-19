@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FXLab · Chart Analysis</title>
-  <meta name="description" content="FXLab - Currency Exchange Rate and Volatility Analysis Using R: statistics of an uploaded chart screenshot">
+  <title>Chart Reader · Dashboard</title>
+  <meta name="description" content="Chart Reader - Probability &amp; Statistics of Uploaded Graphs Using R: reads the prices from a chart screenshot and applies the syllabus to them">
   <link rel="preload" href="assets/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="report.css">
@@ -15,11 +15,11 @@
 
   <!-- ===================== TOP BAR ===================== -->
   <header class="topbar">
-    <a class="brand" href="#/dashboard" aria-label="FXLab dashboard">
+    <a class="brand" href="#/dashboard" aria-label="Chart Reader dashboard">
       <svg class="icon brand-mark" aria-hidden="true"><use href="assets/icons.svg?v=3#i-chart-no-axes-column-increasing"/></svg>
       <span class="brand-text">
-        <span class="brand-name">FX<span class="accent">Lab</span></span>
-        <span class="brand-sub">Currency Exchange &amp;<br>Volatility Analysis</span>
+        <span class="brand-name">Chart <span class="accent">Reader</span></span>
+        <span class="brand-sub">Probability &amp;<br>Statistics of Graphs</span>
       </span>
     </a>
     <div class="topbar-tools">
@@ -381,11 +381,12 @@
     <!-- ===================== ABOUT ===================== -->
     <section class="view prose" id="view-about" data-title="About Project" hidden>
       <header class="page-head">
-        <p class="eyebrow">About · FXLab</p>
+        <p class="eyebrow">About · Chart Reader</p>
         <h1 class="page-title">About the <span class="accent">Project</span></h1>
-        <p class="page-sub">FXLab is a Probability and Statistics project that studies how prices on a chart move, how
-          volatile they are, and how probability models can describe where they may go next. Upload a screenshot of any chart
-          (for example USD/INR, Nifty 50 or Bitcoin from TradingView) and every syllabus topic is applied to it.</p>
+        <p class="page-sub">Chart Reader is a Probability and Statistics project: a graph reader. Upload a screenshot of any
+          price chart (for example USD/INR, Nifty 50 or Bitcoin from TradingView); R reads the prices off the graph and applies
+          the whole syllabus to them: descriptive statistics, probability and distributions, testing of hypothesis, and
+          correlation and regression.</p>
       </header>
       <div class="about-grid">
         <div class="panel glass">
@@ -433,7 +434,85 @@
         <div class="panel glass">
           <h2>Credits</h2>
           <p>Statistics: R and Plumber. Text recognition: Tesseract OCR (Apache-2.0) via the tesseract R package. Charts:
-            Chart.js (MIT). Icons: Lucide (ISC). Font: Inter (SIL Open Font Licence). Background: original generated artwork.</p>
+            Chart.js (MIT). 3D splash page: Three.js (MIT). Icons: Lucide (ISC). Font: Inter (SIL Open Font Licence). Background: original generated artwork.</p>
+        </div>
+        <div class="panel glass about-team">
+          <h2>Team</h2>
+          <p>Made by students of STME, B.Tech CSE (Data Science), 2nd year, Batch A1.
+            <a href="splash.html">Open the 3D splash page</a></p>
+          <div class="team-grid">
+            <article class="team-card glass m1">
+              <svg class="team-chart" viewBox="0 0 160 60" aria-hidden="true">
+                <path class="team-area" d="M0 53.8 L8 53.5 L16 52.8 L24 51.2 L32 48.3 L40 43.5 L48 36.7 L56 28.5 L64 20.4 L72 14.3 L80 12.0 L88 14.3 L96 20.4 L104 28.5 L112 36.7 L120 43.5 L128 48.3 L136 51.2 L144 52.8 L152 53.5 L160 53.8 L160 58 L0 58 Z"/>
+                <path class="team-line" pathLength="1" d="M0 53.8 L8 53.5 L16 52.8 L24 51.2 L32 48.3 L40 43.5 L48 36.7 L56 28.5 L64 20.4 L72 14.3 L80 12.0 L88 14.3 L96 20.4 L104 28.5 L112 36.7 L120 43.5 L128 48.3 L136 51.2 L144 52.8 L152 53.5 L160 53.8"/>
+                <line class="team-mean" x1="80" y1="8" x2="80" y2="58"/>
+              </svg>
+              <div class="team-avatar">
+                <svg class="team-ring" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-seg s1" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s2" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s3" cx="32" cy="32" r="28" pathLength="100"/>
+                </svg>
+                <span>CS</span>
+              </div>
+              <p class="team-index">Team member 1</p>
+              <h3 class="team-name">Chirag Seervi</h3>
+              <p class="team-meta">STME · B.Tech CSE (DS) · Batch A1</p>
+              <span class="team-glare" aria-hidden="true"></span>
+            </article>
+            <article class="team-card glass m2">
+              <svg class="team-chart" viewBox="0 0 160 60" aria-hidden="true">
+                <g class="team-candles">
+                  <line x1="10" y1="34" x2="10" y2="52"/><rect class="up" x="6" y="38" width="8" height="10"/>
+                  <line x1="27" y1="30" x2="27" y2="46"/><rect class="up" x="23" y="32" width="8" height="10"/>
+                  <line x1="44" y1="26" x2="44" y2="44"/><rect class="down" x="40" y="30" width="8" height="8"/>
+                  <line x1="61" y1="20" x2="61" y2="40"/><rect class="up" x="57" y="24" width="8" height="12"/>
+                  <line x1="78" y1="16" x2="78" y2="34"/><rect class="up" x="74" y="18" width="8" height="10"/>
+                  <line x1="95" y1="18" x2="95" y2="38"/><rect class="down" x="91" y="20" width="8" height="12"/>
+                  <line x1="112" y1="14" x2="112" y2="32"/><rect class="up" x="108" y="16" width="8" height="12"/>
+                  <line x1="129" y1="8" x2="129" y2="26"/><rect class="up" x="125" y="10" width="8" height="10"/>
+                  <line x1="146" y1="10" x2="146" y2="28"/><rect class="down" x="142" y="12" width="8" height="9"/>
+                </g>
+                <line class="team-mean" x1="0" y1="30" x2="160" y2="30"/>
+              </svg>
+              <div class="team-avatar">
+                <svg class="team-ring" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-seg s1" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s2" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s3" cx="32" cy="32" r="28" pathLength="100"/>
+                </svg>
+                <span>AS</span>
+              </div>
+              <p class="team-index">Team member 2</p>
+              <h3 class="team-name">Ayushman Singh</h3>
+              <p class="team-meta">STME · B.Tech CSE (DS) · Batch A1</p>
+              <span class="team-glare" aria-hidden="true"></span>
+            </article>
+            <article class="team-card glass m3">
+              <svg class="team-chart" viewBox="0 0 160 60" aria-hidden="true">
+                <line class="team-line team-reg" pathLength="1" x1="4" y1="52" x2="156" y2="10"/>
+                <g class="team-dots">
+                  <circle cx="12" cy="46" r="3"/><circle cx="22" cy="52" r="3"/><circle cx="32" cy="40" r="3"/>
+                  <circle cx="44" cy="44" r="3"/><circle cx="54" cy="34" r="3"/><circle cx="64" cy="40" r="3"/>
+                  <circle cx="76" cy="30" r="3"/><circle cx="86" cy="36" r="3"/><circle cx="98" cy="24" r="3"/>
+                  <circle cx="108" cy="28" r="3"/><circle cx="120" cy="18" r="3"/><circle cx="132" cy="24" r="3"/>
+                  <circle cx="142" cy="12" r="3"/><circle cx="152" cy="16" r="3"/>
+                </g>
+              </svg>
+              <div class="team-avatar">
+                <svg class="team-ring" viewBox="0 0 64 64" aria-hidden="true">
+                  <circle class="ring-seg s1" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s2" cx="32" cy="32" r="28" pathLength="100"/>
+                  <circle class="ring-seg s3" cx="32" cy="32" r="28" pathLength="100"/>
+                </svg>
+                <span>AD</span>
+              </div>
+              <p class="team-index">Team member 3</p>
+              <h3 class="team-name">Ayush Dubey</h3>
+              <p class="team-meta">STME · B.Tech CSE (DS) · Batch A1</p>
+              <span class="team-glare" aria-hidden="true"></span>
+            </article>
+          </div>
         </div>
       </div>
     </section>

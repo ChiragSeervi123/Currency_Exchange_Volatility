@@ -1,5 +1,5 @@
 # =============================================================================
-# api.R  -  FXLab HTTP API (R Plumber)
+# api.R  -  Chart Reader HTTP API (R Plumber)
 # -----------------------------------------------------------------------------
 # This file only routes requests: it reads and validates the request, calls a
 # statistical function from the other backend modules, and wraps the result.
@@ -24,7 +24,7 @@
 plumber::register_parser("fxraw", function(...) function(value, ...) value,
                          fixed = c("application/json", "text/json"), verbose = FALSE)
 
-#* @apiTitle FXLab API
+#* @apiTitle Chart Reader API
 #* @apiDescription Statistical analysis of a price chart screenshot (and of the bundled USD/INR data). All computations run in R.
 #* @apiVersion 1.0.0
 
@@ -56,12 +56,12 @@ api_run <- function(res, expr, message = "OK") {
     return(api_failure(res, outcome$status, outcome$code, conditionMessage(outcome), outcome$field))
   }
   if (inherits(outcome, "error")) {
-    message("[FXLab] Unexpected error: ", conditionMessage(outcome))
+    message("[Chart Reader] Unexpected error: ", conditionMessage(outcome))
     return(api_failure(res, 500L, "INTERNAL_ERROR",
                        "An unexpected error occurred while processing the request. Details are in the R console."))
   }
   if (length(r_warnings) > 0) {
-    message("[FXLab] R warnings: ", paste(unique(r_warnings), collapse = " | "))
+    message("[Chart Reader] R warnings: ", paste(unique(r_warnings), collapse = " | "))
     if (is.list(outcome)) outcome$r_warnings <- I(unique(r_warnings))
   }
   api_success(outcome, message)
@@ -75,7 +75,7 @@ function(pr) {
   pr |>
     plumber::pr_set_serializer(plumber::serializer_unboxed_json(na = "null", null = "null", digits = NA)) |>
     plumber::pr_set_error(function(req, res, err) {
-      message("[FXLab] Unhandled error on ", req$PATH_INFO, ": ", conditionMessage(err))
+      message("[Chart Reader] Unhandled error on ", req$PATH_INFO, ": ", conditionMessage(err))
       api_failure(res, 500L, "INTERNAL_ERROR", "An unexpected error occurred. Details are in the R console.")
     }) |>
     plumber::pr_set_404(function(req, res) {
@@ -88,7 +88,7 @@ function(pr) {
     plumber::pr_hook("postserialize", function(data, req, res, value) {
       if (!startsWith(req$PATH_INFO, FXLAB_CONFIG$frontend_mount)) {
         ms <- if (is.null(req$fxlab_start)) NA else round(1000 * as.numeric(difftime(Sys.time(), req$fxlab_start, units = "secs")))
-        message(sprintf("[FXLab] %s %s %s -> %s (%s ms)", format(Sys.time(), "%H:%M:%S"), req$REQUEST_METHOD,
+        message(sprintf("[Chart Reader] %s %s %s -> %s (%s ms)", format(Sys.time(), "%H:%M:%S"), req$REQUEST_METHOD,
                         req$PATH_INFO, res$status, ms))
       }
       value
@@ -124,7 +124,7 @@ function(req, res) {
 function(res) {
   res$status <- 302L
   res$setHeader("Location", paste0(FXLAB_CONFIG$frontend_mount, "/"))
-  "<a href='/app/'>FXLab</a>"
+  "<a href='/app/'>Chart Reader</a>"
 }
 
 #* @get /app
@@ -132,7 +132,7 @@ function(res) {
 function(res) {
   res$status <- 301L
   res$setHeader("Location", paste0(FXLAB_CONFIG$frontend_mount, "/"))
-  "<a href='/app/'>FXLab</a>"
+  "<a href='/app/'>Chart Reader</a>"
 }
 
 # ---- Endpoints -----------------------------------------------------------------------------------------
@@ -152,7 +152,7 @@ function(res) {
     uploaded_dataset_active = !is.null(.fx_state$uploaded),
     chart_loaded = !is.null(.fx_state$chart),
     ocr_engine = tryCatch(paste("tesseract", tesseract::tesseract_info()$version), error = function(e) "unavailable")
-  ), "FXLab API is running")
+  ), "Chart Reader API is running")
 }
 
 #* Default parameters and the options the forms offer

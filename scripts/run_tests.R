@@ -12,7 +12,7 @@
 if (!requireNamespace("testthat", quietly = TRUE)) {
   stop("Install the test packages first:  Rscript scripts/install_packages.R", call. = FALSE)
 }
-if (!file.exists("FXLab.Rproj")) stop("Run this script from the FXLab project folder.", call. = FALSE)
+if (!file.exists("FXLab.Rproj")) stop("Run this script from the Chart Reader project folder.", call. = FALSE)
 
 results <- testthat::test_dir("tests", reporter = testthat::ProgressReporter$new(show_praise = FALSE),
                               stop_on_failure = FALSE)

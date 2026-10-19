@@ -48,7 +48,7 @@ key <- function(k) {
 }
 
 # Navigate without waiting for Chrome's reply to Page.navigate (the first page load in a
-# fresh headless profile can be slow), then wait for the page and FXLab's scripts.
+# fresh headless profile can be slow), then wait for the page and Chart Reader's scripts.
 open_view <- function(hash, timeout = 60) {
   url <- paste0(server$url, "/app/", hash)
   browser$Page$navigate(url, wait_ = FALSE)
@@ -110,7 +110,7 @@ analyze <- function() {
 }
 
 # Load the app once; if this headless browser cannot even load the page (an environment
-# problem, not an FXLab one), skip instead of producing a cascade of time-outs.
+# problem, not a Chart Reader one), skip instead of producing a cascade of time-outs.
 first_load <- tryCatch({ open_view("#/dashboard", timeout = 90); TRUE }, error = function(e) FALSE)
 skip_if(!first_load, "the headless browser could not load the page within 90 seconds")
 
