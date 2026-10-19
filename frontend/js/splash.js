@@ -205,7 +205,7 @@ function startScene() {
   scene.add(line);
   var pillarGeo = new THREE.BoxGeometry(1, 1, 1); pillarGeo.translate(0, 0.5, 0);
   var pillar = new THREE.Mesh(pillarGeo,
-    new THREE.MeshStandardMaterial({ color: 0xfcd38a, emissive: 0xfcd38a, emissiveIntensity: 0.7, transparent: true, opacity: 0.9 }));
+    new THREE.MeshStandardMaterial({ color: 0xfcd38a, emissive: 0xfcd38a, emissiveIntensity: 0.8, transparent: true, opacity: 0.6, depthWrite: false }));
   var pillarState = { x: 0, h: 0.001, tx: 0, th: 0.001 };
   scene.add(pillar);
 
@@ -589,7 +589,7 @@ function startScene() {
     line.material.color.lerp(lineState.color, k); line.material.emissive.lerp(lineState.color, k);
     pillarState.x = lerp(pillarState.x, pillarState.tx, k * 1.6); pillarState.h = lerp(pillarState.h, pillarState.th, k);
     pillar.position.set(pillarState.x, 0, 0);
-    pillar.scale.set(pillarState.h > 0.05 ? 0.16 : 0.001, Math.max(pillarState.h, 0.001), pillarState.h > 0.05 ? 3.2 : 0.001);
+    pillar.scale.set(pillarState.h > 0.05 ? 0.1 : 0.001, Math.max(pillarState.h, 0.001), pillarState.h > 0.05 ? 2.9 : 0.001);
 
     if (!reduceMotion) { dust.rotation.y = now * 0.012; dust.position.y = Math.sin(now * 0.3) * 0.3; }
 

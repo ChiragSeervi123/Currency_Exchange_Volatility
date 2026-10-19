@@ -30,7 +30,8 @@ Browser (HTML/CSS/JS, Chart.js)  --screenshot (base64 JSON)-->  R Plumber API (b
 | **Chart Data** | How the chart was read (axis labels used, resolution, title, time labels), the extracted points drawn on the screenshot, closing prices with the high–low band, returns and rolling volatility, and a table of every extracted candle |
 | **Report** | The whole analysis as one document: summary and verdict, the chart and how it was read, descriptive statistics, probability, every hypothesis test with its formula, our hypothesis, regression and limitations, with the screenshot and four charts. **Download report** saves a standalone HTML file (charts and screenshot embedded, opens in any browser); **Print / Save as PDF** prints just the report (white paper layout) |
 | **Storage** | A local library of every chart you have uploaded (saved automatically — see section 6). Each card shows a thumbnail, name, interval, last price, change and verdict; **Open** makes it the current analysis again without re-uploading it, **Report** opens its report directly, and **Delete** / **Clear all** remove saved charts |
-| **About Project** | Methods, data, assumptions and limitations |
+| **About Project** | Methods, data, assumptions and limitations, and the team |
+| **Splash page** (`/app/splash.html`, opened by `splash.bat`) | An interactive 3D introduction built with Three.js: 484 boxes morph between five syllabus scenes — candlesticks read from a chart, a histogram stacked from observations, a bivariate normal density (ρ slider), a two-tailed Z test (α choice and a movable z with the decision) and points around a regression line (slope and noise sliders). Drag to orbit, Ctrl+scroll / pinch / buttons to zoom, hover for values, click for a ripple, keys 1–5, automatic tour. Then how the app works and the team cards. The scene is an illustration of the topics; the analysis of an uploaded chart is still computed in R |
 
 **Interface.** The design follows `frontend/assets/fxlab-reference.png`: a blurred mountain-at-sunset scene,
 frosted-glass panels, a floating circular navigation rail and the **Chart Upload** panel on the dashboard.
@@ -53,7 +54,7 @@ Charts can be downloaded as PNG and expanded to full screen. Nothing is ever pre
 * **plumber** — HTTP API (also serves the web page). **jsonlite** — JSON. **png**, **jpeg** — read the
   screenshot. **tesseract** — OCR of the axis and legend text (the Windows/macOS package includes the
   English language data; free and offline).
-* **HTML, CSS, vanilla JavaScript** — interface. **Chart.js 4.4.7**, **Lucide** icons (ISC) and the
+* **HTML, CSS, vanilla JavaScript** — interface. **Chart.js 4.4.7**, **Three.js 0.160.0** (splash page, MIT), **Lucide** icons (ISC) and the
   **Inter** font (SIL OFL) are stored locally in `frontend/assets/`, so no internet connection is needed.
   The background (`assets/background.svg`) is original generated artwork.
 * **testthat, curl, processx, withr** — tests. Optional: **moments** (extra cross-checks) and
@@ -67,7 +68,8 @@ Charts can be downloaded as PNG and expanded to full screen. Nothing is ever pre
 ```
 pns2/                          (project folder; open FXLab.Rproj)
 ├── FXLab.Rproj                RStudio project
-├── start_fxlab.bat            double-click to start the app on Windows
+├── start_fxlab.bat            double-click to start the app on Windows (opens the dashboard)
+├── splash.bat                 double-click to start the app and open the 3D splash page
 ├── backend/
 │   ├── main.R                 START HERE: loads everything and runs the API + web page
 │   ├── setup.R                finds the project folder, sources the modules, loads the data
@@ -84,6 +86,7 @@ pns2/                          (project folder; open FXLab.Rproj)
 │   └── regression_analysis.R  correlation and regression (fit_simple_regression is reused for charts)
 ├── frontend/
 │   ├── index.html             the single-page interface: top bar, rail, dashboard (with Chart Upload), analysis pages
+│   ├── splash.html, splash.css, js/splash.js   the 3D splash page (Three.js)
 │   ├── style.css              glass theme; design tokens at the top (colours, glass, layout)
 │   ├── js/config.js           API base URL (the one place to change it)
 │   ├── js/api.js              API client (errors, timeouts, no duplicate requests)
@@ -93,7 +96,7 @@ pns2/                          (project folder; open FXLab.Rproj)
 │   ├── js/app.js              navigation, rail, backend status, chart popover, clock
 │   ├── js/sections/*.js       one file per page (dashboard.js = the main dashboard)
 │   └── assets/                background.svg, icons.svg (Lucide sprite), fonts/ (Inter),
-│                              vendor/chart.umd.min.js (Chart.js), fxlab-reference.png (design reference)
+│                              vendor/chart.umd.min.js (Chart.js), vendor/three.module.min.js (Three.js 0.160.0, MIT), fxlab-reference.png (design reference)
 ├── data/
 │   ├── exchange_rates.csv     USD/INR, Date,USDINR (FRED DEXINUS, 1973-01-02 to 2026-10-09)
 │   ├── dollar_index.csv       Date,DollarIndex (FRED DTWEXBGS, 2006-01-02 to 2026-10-09)
@@ -144,6 +147,9 @@ The R backend serves both the API and the web page, so **one process is enough**
 Then open <http://127.0.0.1:8000/>. Stop with **Ctrl+C**.
 
 **Option C — double-click `start_fxlab.bat`.** It finds Rscript, starts the backend and opens the browser.
+**Double-click `splash.bat`** instead to open the 3D splash page first (http://127.0.0.1:8000/app/splash.html);
+its **Enter Chart Reader** button opens the dashboard. Both files start the same backend, and if it is already
+running they just open the page.
 
 Useful addresses while it runs:
 
@@ -448,3 +454,13 @@ The earlier report-oriented analysis lives in
 and was **not modified**. Chart Reader includes its FRED data (still served by the API) and ports its tested helpers (Newey-West test,
 Brown-Forsythe test, HC1 standard errors, Breusch-Pagan, Durbin-Watson). The test suite checks that Chart Reader
 reproduces that report's key numbers for 2016–2025.
+
+---
+
+## Team
+
+Made by **STME, B.Tech CSE (Data Science), 2nd year, Batch A1**:
+
+1. Chirag Seervi
+2. Ayushman Singh
+3. Ayush Dubey
